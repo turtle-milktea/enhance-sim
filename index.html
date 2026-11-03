@@ -61,17 +61,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <div><label>強化次數 n</label><div class="n-big" id="nShow">88</div></div>
       <div class="row">
         <label for="start">起始等級</label>
-        <select id="start"><option value="0">+0</option><option value="1" selected>+1</option><option value="2">+2</option><option value="3">+3</option><option value="4">+4</option></select>
+        <select id="start" autocomplete="off"><option value="0">+0</option><option value="1" selected>+1</option><option value="2">+2</option><option value="3">+3</option><option value="4">+4</option></select>
         <label for="maxN">拉桿上限</label>
-        <select id="maxN"><option>200</option><option selected>1000</option><option>5000</option><option>20000</option></select>
+        <select id="maxN" autocomplete="off"><option>200</option><option selected>1000</option><option>5000</option><option>20000</option></select>
       </div>
     </div>
-    <input type="range" id="slider" min="0" max="1000" value="88" aria-label="強化次數">
+    <input type="range" id="slider" autocomplete="off" min="0" max="1000" value="88" aria-label="強化次數">
     <div class="row">
       <button id="dec">−1</button><button id="inc">+1</button>
-      <label for="nInput">直接輸入</label><input type="number" id="nInput" min="0" max="20000" value="88">
+      <label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="88">
       <label for="scale">縱軸</label>
-      <select id="scale"><option value="lin">線性</option><option value="log">對數</option></select>
+      <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select>
     </div>
   </section>
 
@@ -145,7 +145,14 @@ $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
 $("start").addEventListener("change",e=>{cur.start=+e.target.value; render();});
 $("scale").addEventListener("change",render);
 $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
-render();
+// 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值，造成顯示數字與拉桿位置不一致
+function syncAll(){
+  $("start").value=String(cur.start);
+  $("slider").max=$("maxN").value;
+  setN(cur.n);
+}
+syncAll();
+window.addEventListener("pageshow",syncAll);
 </script>
 </body>
 </html>
