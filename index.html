@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>+5 強化機率模擬</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: single column instrument panel — controls on top, bar chart, then numeric table */
+:root{
+  --bg:#f5f6f9; --panel:#ffffff; --fg:#1b2030; --muted:#636a80; --line:#dde1ea;
+  --bar:#4a63c9; --bar-lo:#a9b5e6; --goal:#d98a1c;
+  --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040;
+  --bar:#7d93ee; --bar-lo:#3e4a7e; --goal:#f0a640; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040;
+  --bar:#7d93ee; --bar-lo:#3e4a7e; --goal:#f0a640; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font-size:1.45rem;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.controls{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+label{font-size:.9rem;color:var(--muted)}
+.n-big{font-family:var(--mono);font-size:2rem;font-weight:600;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--bar)}
+input[type=number],select{font:inherit;font-family:var(--mono);padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:7.5em}
+select{width:auto;font-family:var(--sans)}
+button{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
+.chart{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:260px;border-bottom:1px solid var(--line);position:relative}
+.col{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.val{font-family:var(--mono);font-size:.78rem;margin-bottom:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{width:100%;max-width:64px;background:var(--bar);border-radius:4px 4px 0 0;transition:height .12s ease-out;min-height:1px}
+.col.goal .bar{background:var(--goal)}
+.xl{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:6px;text-align:center;font-family:var(--mono);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat .k{font-size:.82rem;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+.note{font-size:.85rem;color:var(--muted);line-height:1.6;margin:0}
+@media (prefers-reduced-motion: reduce){.bar{transition:none}}
+@media (max-width:480px){.val{font-size:.62rem}.chart{gap:5px}.xl{gap:5px}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>強化至 +5 的機率分布</h1>
+    <p class="sub">每次強化成功率 10%；+1 以上失敗時，50% 下降一級、50% 不變；到達 +5 即停止。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
+  </header>
+
+  <section class="panel controls">
+    <div class="row" style="justify-content:space-between">
+      <div><label>強化次數 n</label><div class="n-big" id="nShow">88</div></div>
+      <div class="row">
+        <label for="start">起始等級</label>
+        <select id="start"><option value="0">+0</option><option value="1" selected>+1</option><option value="2">+2</option><option value="3">+3</option><option value="4">+4</option></select>
+        <label for="maxN">拉桿上限</label>
+        <select id="maxN"><option>200</option><option selected>1000</option><option>5000</option><option>20000</option></select>
+      </div>
+    </div>
+    <input type="range" id="slider" min="0" max="1000" value="88" aria-label="強化次數">
+    <div class="row">
+      <button id="dec">−1</button><button id="inc">+1</button>
+      <label for="nInput">直接輸入</label><input type="number" id="nInput" min="0" max="20000" value="88">
+      <label for="scale">縱軸</label>
+      <select id="scale"><option value="lin">線性</option><option value="log">對數</option></select>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="chart" id="chart"></div>
+    <div class="xl" id="xl"></div>
+  </section>
+
+  <section class="panel stats">
+    <div class="stat"><div class="k">已到達 +5（n 次內）</div><div class="v" id="s5"></div></div>
+    <div class="stat"><div class="k">尚未到達 +5</div><div class="v" id="sNot"></div></div>
+    <div class="stat"><div class="k">期望總次數（自起點）</div><div class="v" id="sE"></div></div>
+    <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
+  </section>
+
+  <p class="note">對數縱軸以 10⁻⁶ 為下限，方便同時看清楚 +0 與 +4 這類數量級差很多的機率。</p>
+</div>
+
+<script>
+const P=[[.9,.1,0,0,0,0],[.45,.45,.1,0,0,0],[0,.45,.45,.1,0,0],[0,0,.45,.45,.1,0],[0,0,0,.45,.45,.1],[0,0,0,0,0,1]];
+const MAXN=20000;
+const E=[6760.625,6750.625,6695.625,6438.125,5269.375];
+const $=id=>document.getElementById(id);
+let cache={}, cur={start:1,n:88};
+
+function table(start){
+  if(cache[start]) return cache[start];
+  const out=new Float64Array((MAXN+1)*6);
+  let v=[0,0,0,0,0,0]; v[start]=1;
+  for(let n=0;n<=MAXN;n++){
+    for(let j=0;j<6;j++) out[n*6+j]=v[j];
+    const w=[0,0,0,0,0,0];
+    for(let i=0;i<6;i++){ if(!v[i]) continue; for(let j=0;j<6;j++) w[j]+=v[i]*P[i][j]; }
+    v=w;
+  }
+  let med=null; for(let n=0;n<=MAXN;n++){ if(out[n*6+5]>0.5){med=n;break;} }
+  return cache[start]={out,med};
+}
+
+const chart=$("chart"), xl=$("xl"), cols=[];
+for(let k=0;k<6;k++){
+  const c=document.createElement("div"); c.className="col"+(k===5?" goal":"");
+  c.innerHTML='<div class="val"></div><div class="bar"></div>'; chart.appendChild(c); cols.push(c);
+  const l=document.createElement("div"); l.textContent="+"+k; xl.appendChild(l);
+}
+const pct=x=>(x*100).toFixed(4)+"%";
+
+function render(){
+  const {out,med}=table(cur.start), n=cur.n, log=$("scale").value==="log";
+  for(let k=0;k<6;k++){
+    const p=out[n*6+k];
+    let h = log ? (p<=1e-6?0:(Math.log10(p)+6)/6) : p;
+    cols[k].querySelector(".bar").style.height=(Math.max(0,h)*88)+"%";
+    cols[k].querySelector(".val").textContent=pct(p);
+    cols[k].querySelector(".bar").setAttribute("title","+"+k+"："+pct(p));
+  }
+  $("nShow").textContent=n;
+  $("s5").textContent=pct(out[n*6+5]);
+  $("sNot").textContent=pct(1-out[n*6+5]);
+  $("sE").textContent=E[cur.start].toFixed(3);
+  $("sMed").textContent=med===null?"> "+MAXN:med;
+}
+function setN(n){
+  n=Math.max(0,Math.min(MAXN,Math.round(+n||0))); cur.n=n;
+  if(n>+$("slider").max){ const opts=[200,1000,5000,20000]; const m=opts.find(o=>o>=n); $("maxN").value=m; $("slider").max=m; }
+  $("slider").value=n; $("nInput").value=n; render();
+}
+$("slider").addEventListener("input",e=>setN(e.target.value));
+$("nInput").addEventListener("input",e=>setN(e.target.value));
+$("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
+$("start").addEventListener("change",e=>{cur.start=+e.target.value; render();});
+$("scale").addEventListener("change",render);
+$("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
+render();
+</script>
+</body>
+</html>
