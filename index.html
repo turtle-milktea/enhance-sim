@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>+5 強化機率模擬</title>
+<title>強化機率模擬</title>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -52,8 +52,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
 <div class="wrap">
   <header>
-    <h1>強化至 +5 的機率分布</h1>
-    <p class="sub">每次強化成功率 10%；+1 以上失敗時，50% 下降一級、50% 不變；到達 +5 即停止。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
+    <h1>強化機率分布模擬</h1>
+    <p class="sub">每次強化成功率 10%；+1 以上失敗時，50% 下降一級、50% 不變。到達目標等級即停止（+5 為上限，到達後也停止）。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
   </header>
 
   <section class="panel controls">
@@ -62,6 +62,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <div class="row">
         <label for="start">起始等級</label>
         <select id="start" autocomplete="off"><option value="0">+0</option><option value="1" selected>+1</option><option value="2">+2</option><option value="3">+3</option><option value="4">+4</option></select>
+        <label for="target">目標等級</label>
+        <select id="target" autocomplete="off"><option value="0">+0</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option><option value="4">+4</option><option value="5" selected>+5</option></select>
         <label for="maxN">拉桿上限</label>
         <select id="maxN" autocomplete="off"><option>200</option><option selected>1000</option><option>5000</option><option>20000</option></select>
       </div>
@@ -81,25 +83,51 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   </section>
 
   <section class="panel stats">
-    <div class="stat"><div class="k">已到達 +5（n 次內）</div><div class="v" id="s5"></div></div>
-    <div class="stat"><div class="k">尚未到達 +5</div><div class="v" id="sNot"></div></div>
-    <div class="stat"><div class="k">期望總次數（自起點）</div><div class="v" id="sE"></div></div>
+    <div class="stat"><div class="k" id="kHit"></div><div class="v" id="sHit"></div></div>
+    <div class="stat"><div class="k" id="kNot"></div><div class="v" id="sNot"></div></div>
+    <div class="stat"><div class="k" id="kE"></div><div class="v" id="sE"></div></div>
     <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
   </section>
 
-  <p class="note">對數縱軸以 10⁻⁶ 為下限，方便同時看清楚 +0 與 +4 這類數量級差很多的機率。</p>
+  <p class="note" id="note">對數縱軸以 10⁻⁶ 為下限，方便同時看清楚數量級差很多的機率。橘色長條為目標等級。</p>
 </div>
 
 <script>
-const P=[[.9,.1,0,0,0,0],[.45,.45,.1,0,0,0],[0,.45,.45,.1,0,0],[0,0,.45,.45,.1,0],[0,0,0,.45,.45,.1],[0,0,0,0,0,1]];
+// 基本轉移規則（不含停止條件）
+const BASE=[[.9,.1,0,0,0,0],[.45,.45,.1,0,0,0],[0,.45,.45,.1,0,0],[0,0,.45,.45,.1,0],[0,0,0,.45,.45,.1],[0,0,0,0,0,1]];
 const MAXN=20000;
-const E=[6760.625,6750.625,6695.625,6438.125,5269.375];
 const $=id=>document.getElementById(id);
-let cache={}, cur={start:1,n:88};
+let cache={}, cur={start:1,target:5,n:88};
 
-function table(start){
-  if(cache[start]) return cache[start];
-  const out=new Float64Array((MAXN+1)*6);
+// 目標等級 T 與 +5 皆為吸收態
+function matrix(T){ return BASE.map((r,i)=> (i===T||i===5) ? r.map((_,j)=>+(j===i)) : r.slice()); }
+
+// 解線性方程組（高斯消去，部分選主元）
+function solve(A,b){
+  const n=b.length, M=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){
+    let p=c; for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p=r;
+    [M[c],M[p]]=[M[p],M[c]];
+    for(let r=0;r<n;r++){ if(r===c) continue; const f=M[r][c]/M[c][c]; for(let k=c;k<=n;k++) M[r][k]-=f*M[c][k]; }
+  }
+  return M.map((r,i)=>r[n]/r[i]);
+}
+
+// 從 start 出發：最終到達 T 的機率 h、到達 T 必然時的期望次數 e
+function analytic(start,T){
+  if(start===T) return {h:1,e:0};
+  const P=matrix(T), tr=[0,1,2,3,4,5].filter(i=>i!==T&&i!==5);
+  const A=tr.map(i=>tr.map(j=>(i===j?1:0)-P[i][j]));
+  const h=solve(A,tr.map(i=>P[i][T]));
+  const hs=h[tr.indexOf(start)];
+  if(Math.abs(hs-1)>1e-12) return {h:hs,e:null};
+  const e=solve(A,tr.map(()=>1));
+  return {h:1,e:e[tr.indexOf(start)]};
+}
+
+function table(start,T){
+  const key=start+"-"+T; if(cache[key]) return cache[key];
+  const P=matrix(T), out=new Float64Array((MAXN+1)*6);
   let v=[0,0,0,0,0,0]; v[start]=1;
   for(let n=0;n<=MAXN;n++){
     for(let j=0;j<6;j++) out[n*6+j]=v[j];
@@ -107,32 +135,39 @@ function table(start){
     for(let i=0;i<6;i++){ if(!v[i]) continue; for(let j=0;j<6;j++) w[j]+=v[i]*P[i][j]; }
     v=w;
   }
-  let med=null; for(let n=0;n<=MAXN;n++){ if(out[n*6+5]>0.5){med=n;break;} }
-  return cache[start]={out,med};
+  let med=null; for(let n=0;n<=MAXN;n++){ if(out[n*6+T]>0.5){med=n;break;} }
+  return cache[key]={out,med,...analytic(start,T)};
 }
 
 const chart=$("chart"), xl=$("xl"), cols=[];
 for(let k=0;k<6;k++){
-  const c=document.createElement("div"); c.className="col"+(k===5?" goal":"");
+  const c=document.createElement("div"); c.className="col";
   c.innerHTML='<div class="val"></div><div class="bar"></div>'; chart.appendChild(c); cols.push(c);
   const l=document.createElement("div"); l.textContent="+"+k; xl.appendChild(l);
 }
 const pct=x=>(x*100).toFixed(4)+"%";
 
 function render(){
-  const {out,med}=table(cur.start), n=cur.n, log=$("scale").value==="log";
+  const T=cur.target, t=table(cur.start,T), n=cur.n, log=$("scale").value==="log";
   for(let k=0;k<6;k++){
-    const p=out[n*6+k];
+    const p=t.out[n*6+k];
     let h = log ? (p<=1e-6?0:(Math.log10(p)+6)/6) : p;
+    cols[k].classList.toggle("goal",k===T);
     cols[k].querySelector(".bar").style.height=(Math.max(0,h)*88)+"%";
     cols[k].querySelector(".val").textContent=pct(p);
     cols[k].querySelector(".bar").setAttribute("title","+"+k+"："+pct(p));
   }
+  const hit=t.out[n*6+T];
   $("nShow").textContent=n;
-  $("s5").textContent=pct(out[n*6+5]);
-  $("sNot").textContent=pct(1-out[n*6+5]);
-  $("sE").textContent=E[cur.start].toFixed(3);
-  $("sMed").textContent=med===null?"> "+MAXN:med;
+  $("kHit").textContent="已到達 +"+T+"（n 次內）"; $("sHit").textContent=pct(hit);
+  $("kNot").textContent="尚未到達 +"+T;        $("sNot").textContent=pct(1-hit);
+  if(t.e!==null){ $("kE").textContent="期望總次數（自起點）"; $("sE").textContent=t.e.toFixed(3); }
+  else { $("kE").textContent="最終能到達 +"+T+" 的機率"; $("sE").textContent=pct(t.h); }
+  $("sMed").textContent = t.med!==null ? t.med : (t.h<=0.5 ? "不會超過 50%" : "> "+MAXN);
+  $("note").textContent = (T<cur.start
+      ? "目標低於起始等級：代表「掉到 +"+T+"」的機率。若途中先到達 +5 就會停止，因此最終機率可能小於 100%。"
+      : T===cur.start ? "目標等於起始等級：第 0 次就已達成。" : "")
+    + " 對數縱軸以 10⁻⁶ 為下限。橘色長條為目標等級。";
 }
 function setN(n){
   n=Math.max(0,Math.min(MAXN,Math.round(+n||0))); cur.n=n;
@@ -143,11 +178,14 @@ $("slider").addEventListener("input",e=>setN(e.target.value));
 $("nInput").addEventListener("input",e=>setN(e.target.value));
 $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
 $("start").addEventListener("change",e=>{cur.start=+e.target.value; render();});
+$("target").addEventListener("change",e=>{cur.target=+e.target.value; render();});
 $("scale").addEventListener("change",render);
 $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
-// 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值，造成顯示數字與拉桿位置不一致
+
+// 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
   $("start").value=String(cur.start);
+  $("target").value=String(cur.target);
   $("slider").max=$("maxN").value;
   setN(cur.n);
 }
