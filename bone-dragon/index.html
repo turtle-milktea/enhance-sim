@@ -45,6 +45,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .stat .k{font-size:.82rem;color:var(--muted)}
 .stat .v{font-family:var(--mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
 .note{font-size:.85rem;color:var(--muted);line-height:1.6;margin:0}
+.hint{font-size:.82rem;color:var(--muted)}
+.pair{display:inline-flex;gap:8px;align-items:center}
+th:last-child,td:last-child{text-align:left}
+.hint.bad{color:var(--drop)}
+td.up{color:var(--goal);font-weight:500}
 details summary{cursor:pointer;font-weight:500}
 .tblwrap{overflow-x:auto;margin-top:12px}
 table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
@@ -52,7 +57,7 @@ th,td{padding:5px 10px;border-bottom:1px solid var(--line);text-align:center;whi
 th{color:var(--muted);font-weight:500}
 td.dropcell{color:var(--drop);font-weight:500}
 @media (prefers-reduced-motion: reduce){.bar{transition:none}}
-@media (max-width:480px){.hrow{grid-template-columns:2.4em 1fr 5.8em;gap:6px}.val{font-size:.7rem}}
+@media (max-width:480px){.hrow{grid-template-columns:2.4em 1fr 5.8em;gap:6px}.val{font-size:.7rem}th,td{padding:5px 6px}}
 </style>
 </head>
 <body>
@@ -60,7 +65,7 @@ td.dropcell{color:var(--drop);font-weight:500}
 <div class="wrap">
   <header>
     <h1>骨龍裝強化機率分布</h1>
-    <p class="sub">依強化表計算，不考慮破壞。強化到 +12、+14、+16、+18、+20 失敗時，50% 下降一級、50% 不變；其他階段失敗時等級不變。到達目標等級即停止（+20 為上限）。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
+    <p class="sub">依強化表計算，不考慮破壞。強化到 +12、+14、+16、+18、+20 失敗時，50% 下降一級、50% 不變；其他階段失敗時等級不變。到達目標等級即停止（+20 為上限）。遇到機率活動時，可調整成功率倍率：所有成功率未滿 100% 的階段都乘上倍率，超過 100% 時以 100% 計。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
   </header>
 
   <section class="panel controls">
@@ -76,9 +81,11 @@ td.dropcell{color:var(--drop);font-weight:500}
     <input type="range" id="slider" autocomplete="off" min="0" max="5000" value="0" aria-label="強化次數">
     <div class="row">
       <button id="dec">−1</button><button id="inc">+1</button>
-      <label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="0">
-      <label for="scale">橫軸</label>
-      <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select>
+      <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="0"></span>
+      <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="0.1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
+      <span class="hint" id="multHint"></span>
+      <span class="pair"><label for="scale">橫軸</label>
+      <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
     </div>
   </section>
 
@@ -98,26 +105,29 @@ td.dropcell{color:var(--drop);font-weight:500}
   <section class="panel">
     <details>
       <summary>強化規則表</summary>
-      <div class="tblwrap"><table id="rules"><thead><tr><th>強化到</th><th>成功率</th><th>失敗時</th></tr></thead><tbody></tbody></table></div>
+      <div class="tblwrap"><table id="rules"><thead><tr><th>強化到</th><th>基礎<br>成功率</th><th>目前<br>成功率</th><th>失敗時</th></tr></thead><tbody></tbody></table></div>
     </details>
   </section>
 </div>
 
 <script>
-// 強化到 +k 的成功率（k = 1..20）
-const SUCC=[null,1,1,1,.82,.69,.56,.44,.32,.20,.08,.07,.06,.05,.05,.05,.05,.05,.05,.05,.05];
+// 強化到 +k 的基礎成功率（k = 1..20）
+const BASE=[null,1,1,1,.82,.69,.56,.44,.32,.20,.08,.07,.06,.05,.05,.05,.05,.05,.05,.05,.05];
+const MULT_MIN=0.1, MULT_MAX=10;
+// 目前成功率：未滿 100% 的階段乘上倍率，超過 100% 以 100% 計；基礎為 100% 的階段不變
+const rate=(k,m)=> BASE[k]>=1 ? 1 : Math.min(1, BASE[k]*m);
 // 強化到這些等級失敗時：50% 下降一級、50% 不變；其他等級失敗時不變
 const DROP=new Set([12,14,16,18,20]);
 const TOP=20, L=TOP+1, MAXN=20000;
 const $=id=>document.getElementById(id);
-let cache={}, cur={start:0,target:TOP,n:0};
+let cache={}, cur={start:0,target:TOP,n:0,mult:1};
 
 // 目標等級 T 與 +20 為吸收態
-function matrix(T){
+function matrix(T,m){
   const P=Array.from({length:L},()=>new Array(L).fill(0));
   for(let k=0;k<L;k++){
     if(k===T||k===TOP){ P[k][k]=1; continue; }
-    const s=SUCC[k+1], f=1-s;
+    const s=rate(k+1,m), f=1-s;
     P[k][k+1]+=s;
     if(DROP.has(k+1)){ P[k][k-1]+=f/2; P[k][k]+=f/2; } else P[k][k]+=f;
   }
@@ -136,9 +146,9 @@ function solve(A,b){
 }
 
 // 從 start 出發：最終到達 T 的機率 h；若必定到達，另算期望次數 e
-function analytic(start,T){
+function analytic(start,T,m){
   if(start===T) return {h:1,e:0};
-  const P=matrix(T), tr=[...Array(L).keys()].filter(i=>i!==T&&i!==TOP);
+  const P=matrix(T,m), tr=[...Array(L).keys()].filter(i=>i!==T&&i!==TOP);
   const A=tr.map(i=>tr.map(j=>(i===j?1:0)-P[i][j]));
   const h=solve(A,tr.map(i=>P[i][T]))[tr.indexOf(start)];
   if(Math.abs(h-1)>1e-9) return {h,e:null};
@@ -146,9 +156,9 @@ function analytic(start,T){
 }
 
 // 預先算好 0..MAXN 次後的分布（同一組起點與目標只算一次）
-function table(start,T){
-  const key=start+"-"+T; if(cache[key]) return cache[key];
-  const P=matrix(T), out=new Float64Array((MAXN+1)*L);
+function table(start,T,m){
+  const key=start+"-"+T+"-"+m; if(cache[key]) return cache[key];
+  const P=matrix(T,m), out=new Float64Array((MAXN+1)*L);
   let v=new Float64Array(L); v[start]=1;
   for(let n=0;n<=MAXN;n++){
     out.set(v,n*L);
@@ -157,7 +167,7 @@ function table(start,T){
     v=w;
   }
   let med=null; for(let n=0;n<=MAXN;n++){ if(out[n*L+T]>0.5){med=n;break;} }
-  return cache[key]={out,med,...analytic(start,T)};
+  return cache[key]={out,med,...analytic(start,T,m)};
 }
 
 // 建立選單、圖表列與規則表
@@ -170,19 +180,25 @@ for(let k=0;k<L;k++){
   chart.appendChild(r); rows.push(r);
 }
 const tb=$("rules").tBodies[0];
-for(let k=1;k<=TOP;k++){
-  const tr=tb.insertRow();
-  tr.insertCell().textContent="+"+(k-1)+" → +"+k;
-  tr.insertCell().textContent=Math.round(SUCC[k]*100)+"%";
-  const c=tr.insertCell();
-  if(SUCC[k]===1){ c.textContent="—"; }
-  else if(DROP.has(k)){ c.textContent="50% 降一級、50% 不變"; c.className="dropcell"; }
-  else c.textContent="不變";
+const fmtRate=x=>+(x*100).toFixed(2)+"%";
+function renderRules(){
+  tb.innerHTML="";
+  for(let k=1;k<=TOP;k++){
+    const tr=tb.insertRow(), r=rate(k,cur.mult);
+    tr.insertCell().textContent="+"+(k-1)+" → +"+k;
+    tr.insertCell().textContent=fmtRate(BASE[k]);
+    const cr=tr.insertCell(); cr.textContent=fmtRate(r);
+    if(Math.abs(r-BASE[k])>1e-12) cr.className="up";
+    const c=tr.insertCell();
+    if(r>=1){ c.textContent="—"; }
+    else if(DROP.has(k)){ c.innerHTML="50% 降一級<br>50% 不變"; c.className="dropcell"; }
+    else c.textContent="不變";
+  }
 }
 
 const pct=x=>(x*100).toFixed(4)+"%";
 function render(){
-  const T=cur.target, t=table(cur.start,T), n=cur.n, log=$("scale").value==="log";
+  const T=cur.target, t=table(cur.start,T,cur.mult), n=cur.n, log=$("scale").value==="log";
   for(let k=0;k<L;k++){
     const p=t.out[n*L+k];
     const w = log ? (p<=1e-6?0:(Math.log10(p)+6)/6) : p;
@@ -214,12 +230,28 @@ $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
 $("start").addEventListener("change",e=>{cur.start=+e.target.value; render();});
 $("target").addEventListener("change",e=>{cur.target=+e.target.value; render();});
 $("scale").addEventListener("change",render);
+// 倍率：輸入有效時立即套用；無效時保留上一個有效倍率並提示
+function multHint(){
+  const h=$("multHint");
+  h.className="hint"; h.textContent = cur.mult===1 ? "（1 = 無活動）" : "目前 ×"+cur.mult+"，5% → "+fmtRate(rate(20,cur.mult));
+}
+$("mult").addEventListener("input",e=>{
+  const v=parseFloat(e.target.value);
+  if(!(v>=MULT_MIN && v<=MULT_MAX)){
+    const h=$("multHint"); h.className="hint bad"; h.textContent="請輸入 "+MULT_MIN+"～"+MULT_MAX+" 之間的數字，目前仍以 ×"+cur.mult+" 計算"; return;
+  }
+  const m=Math.round(v*10000)/10000;
+  if(m!==cur.mult){ cur.mult=m; cache={}; renderRules(); render(); }
+  multHint();
+});
+$("mult").addEventListener("change",()=>{ $("mult").value=cur.mult; multHint(); });
 $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
 
 // 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
   $("start").value=String(cur.start);
   $("target").value=String(cur.target);
+  $("mult").value=cur.mult; renderRules(); multHint();
   $("slider").max=$("maxN").value;
   setN(cur.n);
 }
