@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>露比那特飾品材料模擬</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: single column instrument panel — controls, horizontal bar chart (one row per state), stats, rule tables */
+:root{
+  --bg:#f5f6f9; --panel:#ffffff; --fg:#1b2030; --muted:#636a80; --line:#dde1ea; --track:#eef0f5;
+  --bar:#4a63c9; --goal:#d98a1c; --pre:#8a90a6;
+  --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
+  --bar:#7d93ee; --goal:#f0a640; --pre:#6c728a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
+  --bar:#7d93ee; --goal:#f0a640; --pre:#6c728a; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font-size:1.45rem;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.controls{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.pair{display:inline-flex;gap:8px;align-items:center}
+label{font-size:.9rem;color:var(--muted)}
+.n-big{font-family:var(--mono);font-size:2rem;font-weight:600;font-variant-numeric:tabular-nums}
+.n-unit{font-family:var(--sans);font-size:1rem;font-weight:500;color:var(--muted);margin-left:4px}
+input[type=range]{width:100%;accent-color:var(--bar)}
+input[type=number],select{font:inherit;font-family:var(--mono);padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:7.5em}
+select{width:auto;font-family:var(--sans)}
+button{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
+.hchart{display:flex;flex-direction:column;gap:4px}
+.hrow{display:grid;grid-template-columns:4.2em 1fr 6.6em;gap:8px;align-items:center}
+.hl{font-family:var(--mono);font-weight:600;text-align:right;font-size:.85rem}
+.hl.txt{font-family:var(--sans);font-weight:500}
+.track{height:16px;background:var(--track);border-radius:3px;overflow:hidden}
+.bar{height:100%;width:0;background:var(--bar);border-radius:3px;transition:width .12s ease-out}
+.hrow.pre .bar{background:var(--pre)}
+.hrow.goal .bar{background:var(--goal)}
+.hrow.goal .hl{color:var(--goal)}
+.hrow.off{opacity:.38}
+.val{font-family:var(--mono);font-size:.78rem;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.stat .k{font-size:.82rem;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .v small{font-family:var(--sans);font-size:.8rem;font-weight:400;color:var(--muted);margin-left:2px}
+.note{font-size:.85rem;color:var(--muted);line-height:1.6;margin:0}
+details summary{cursor:pointer;font-weight:500}
+details+details{margin-top:14px}
+.tblwrap{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+th,td{padding:5px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+th{color:var(--muted);font-weight:500}
+tfoot td{font-weight:600}
+@media (prefers-reduced-motion: reduce){.bar{transition:none}}
+@media (max-width:480px){.hrow{grid-template-columns:3.9em 1fr 5.8em;gap:6px}.val{font-size:.7rem}th,td{padding:5px 6px}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>露比那特飾品材料模擬</h1>
+    <p class="sub">白龍飾品 +15～+20 進化為露比那特飾品 +0～+5，進化需要 250 個暗黑核心；露比那特飾品每次強化成功率 30%，失敗不降級，核心照樣消耗。拖動拉桿，查看開了 n 個暗黑核心箱子後，停在各階段的機率。</p>
+  </header>
+
+  <section class="panel controls">
+    <div class="row" style="justify-content:space-between">
+      <div><label>已開暗黑核心箱子</label><div class="n-big"><span id="nShow">0</span><span class="n-unit">箱</span></div></div>
+      <div class="row">
+        <span class="pair"><label for="start">白龍飾品</label><select id="start" autocomplete="off"></select></span>
+        <span class="pair"><label for="target">目標</label><select id="target" autocomplete="off"></select></span>
+      </div>
+    </div>
+    <input type="range" id="slider" autocomplete="off" min="0" max="1000" value="0" aria-label="已開箱數">
+    <div class="row">
+      <button id="dec">−1</button><button id="inc">+1</button>
+      <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="2000" value="0"></span>
+      <span class="pair"><label for="maxN">拉桿上限</label>
+      <select id="maxN" autocomplete="off"><option>200</option><option>500</option><option selected>1000</option><option>2000</option></select></span>
+      <span class="pair"><label for="scale">橫軸</label>
+      <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="hchart" id="chart" role="img" aria-label="開箱後停在各階段的機率"></div>
+  </section>
+
+  <section class="panel stats">
+    <div class="stat"><div class="k" id="kDone"></div><div class="v" id="sDone"></div></div>
+    <div class="stat"><div class="k">期望箱數</div><div class="v" id="sEBox"></div></div>
+    <div class="stat"><div class="k">期望暗黑核心</div><div class="v" id="sECore"></div></div>
+    <div class="stat"><div class="k">50% 機率完成所需箱數</div><div class="v" id="sQ50"></div></div>
+    <div class="stat"><div class="k">90% 機率完成所需箱數</div><div class="v" id="sQ90"></div></div>
+  </section>
+
+  <p class="note">每箱平均 10 個暗黑核心。期望箱數略高於「期望核心 ÷ 10」，因為最後一箱湊夠核心時通常會多出一些，完成時會剩下用不到的核心。開箱多出的核心會保留到下一次強化。冰凝槌子不提供核心。對數橫軸以 10⁻⁶ 為下限。橘色為目標。</p>
+
+  <section class="panel">
+    <details>
+      <summary>進化與強化規則</summary>
+      <div class="tblwrap"><table id="rules"><thead><tr><th>階段</th><th>成功率</th><th>每次消耗<br>核心</th><th>平均消耗<br>核心</th></tr></thead><tbody></tbody></table></div>
+    </details>
+    <details>
+      <summary>暗黑核心箱子內容</summary>
+      <div class="tblwrap"><table id="box"><thead><tr><th>內容</th><th>機率</th><th>核心 × 機率</th></tr></thead><tbody></tbody><tfoot><tr><td>每箱平均</td><td>100%</td><td>10.000</td></tr></tfoot></table></div>
+    </details>
+  </section>
+</div>
+
+<script>
+// 露比那特 +k → +(k+1) 每次消耗的暗黑核心（k = 0..7）
+const COST=[60,80,110,150,200,215,230,245];
+const EVO=250, PS=0.3, TOP=8, MAXN=2000;
+// 暗黑核心箱子：[核心數, 機率%]；冰凝槌子三項合計 3.75%，核心數 0
+const BOX=[[4,22.85],[7,24.9],[10,20.25],[12,10.9],[15,7.0],[18,5.0],[20,2.47],[40,1.2],[45,0.68],[60,0.4],[80,0.3],[90,0.2],[120,0.1],[0,3.75]];
+const OUT=BOX.map(([x,p])=>[x,p/100]);
+const $=id=>document.getElementById(id);
+let cache={}, cur={start:0,target:TOP,n:0};
+
+// 狀態編號：未進化且持有 h 個核心；露比那特 +l 且持有 h 個核心（h < 該階段消耗）；已完成
+function buildChain(start,target){
+  const off={}; let D=EVO;
+  for(let l=start;l<target;l++){ off[l]=D; D+=COST[l]; }
+  // 開完一箱後，依規則立即進化或強化，直到核心不夠為止
+  function settle(l,h,p,acc){
+    if(l<0){ if(h<EVO){ acc.set(h,(acc.get(h)||0)+p); return; } l=start; h-=EVO; }
+    if(l>=target){ acc.set(D,(acc.get(D)||0)+p); return; }
+    if(h<COST[l]){ const i=off[l]+h; acc.set(i,(acc.get(i)||0)+p); return; }
+    h-=COST[l]; settle(l+1,h,p*PS,acc); settle(l,h,p*(1-PS),acc);
+  }
+  const from=[], to=[], w=[], level=new Int8Array(D+1);
+  const states=[]; for(let h=0;h<EVO;h++) states.push([-1,h]);
+  for(let l=start;l<target;l++) for(let h=0;h<COST[l];h++) states.push([l,h]);
+  states.forEach(([l,h],i)=>{
+    level[i]=l;
+    const acc=new Map(); for(const [x,q] of OUT) settle(l,h+x,q,acc);
+    for(const [j,p] of acc){ from.push(i); to.push(j); w.push(p); }
+  });
+  level[D]=target; from.push(D); to.push(D); w.push(1);
+  return {D,from:Int32Array.from(from),to:Int32Array.from(to),w:Float64Array.from(w),level};
+}
+
+// 逐箱推算：記錄 0..MAXN 箱後各階段的機率；期望箱數 = Σ P(n 箱後尚未完成)
+function table(start,target){
+  const key=start+"-"+target; if(cache[key]) return cache[key];
+  const {D,from,to,w,level}=buildChain(start,target), R=TOP+2;
+  const rows=new Float64Array((MAXN+1)*R);
+  let v=new Float64Array(D+1); v[0]=1;
+  let E=0, q50=null, q90=null;
+  for(let n=0;;n++){
+    const done=v[D];
+    if(n<=MAXN){ for(let i=0;i<=D;i++){ const x=v[i]; if(x) rows[n*R+level[i]+1]+=x; } }
+    if(q50===null && done>=0.5) q50=n;
+    if(q90===null && done>=0.9) q90=n;
+    if(n>=MAXN && 1-done<1e-13) break;
+    if(n>100000) break;
+    E+=1-done;
+    const nv=new Float64Array(D+1);
+    for(let k=0;k<w.length;k++){ const x=v[from[k]]; if(x) nv[to[k]]+=x*w[k]; }
+    v=nv;
+  }
+  let cores=EVO; for(let l=start;l<target;l++) cores+=COST[l]/PS;
+  return cache[key]={rows,E,q50,q90,cores};
+}
+
+// 選單、圖表列與規則表
+for(let s=0;s<=5;s++) $("start").add(new Option("+"+(s+15)+"（→ 露比那特 +"+s+"）",s));
+for(let t=0;t<=TOP;t++) $("target").add(new Option("露比那特 +"+t,t));
+const chart=$("chart"), rowsEl=[];
+const labels=["未進化",...Array.from({length:TOP+1},(_,k)=>"+"+k)];
+labels.forEach((t,i)=>{
+  const r=document.createElement("div"); r.className="hrow"+(i===0?" pre":"");
+  r.innerHTML='<div class="hl'+(i===0?' txt':'')+'">'+t+'</div><div class="track"><div class="bar"></div></div><div class="val"></div>';
+  chart.appendChild(r); rowsEl.push(r);
+});
+{
+  const tb=$("rules").tBodies[0];
+  const add=(a,b,c,d)=>{ const tr=tb.insertRow(); [a,b,c,d].forEach(x=>tr.insertCell().textContent=x); };
+  add("進化","100%",EVO,EVO);
+  COST.forEach((c,k)=>add("+"+k+" → +"+(k+1),"30%",c,(c/PS).toFixed(1)));
+  const bb=$("box").tBodies[0];
+  BOX.forEach(([x,p])=>{ const tr=bb.insertRow(); tr.insertCell().textContent= x? "暗黑核心 "+x+" 個" : "冰凝槌子（三項合計）"; tr.insertCell().textContent=p+"%"; tr.insertCell().textContent=(x*p/100).toFixed(3); });
+}
+
+const pct=x=>(x*100).toFixed(4)+"%";
+function render(){
+  const s=cur.start, T=cur.target, t=table(s,T), n=cur.n, R=TOP+2, log=$("scale").value==="log";
+  for(let i=0;i<R;i++){
+    const p=t.rows[n*R+i], lv=i-1;
+    const wd = log ? (p<=1e-6?0:(Math.log10(p)+6)/6) : p;
+    rowsEl[i].classList.toggle("goal",lv===T);
+    rowsEl[i].classList.toggle("off", i>0 && (lv<s || lv>T));
+    rowsEl[i].querySelector(".bar").style.width=(Math.max(0,Math.min(1,wd))*100)+"%";
+    rowsEl[i].querySelector(".val").textContent=pct(p);
+    rowsEl[i].title=labels[i]+"："+pct(p);
+  }
+  $("nShow").textContent=n;
+  $("kDone").textContent="已到達 +"+T+"（"+n+" 箱內）"; $("sDone").textContent=pct(t.rows[n*R+T+1]);
+  $("sEBox").innerHTML=t.E.toFixed(2)+"<small>箱</small>";
+  $("sECore").innerHTML=t.cores.toFixed(2)+"<small>個</small>";
+  $("sQ50").innerHTML=t.q50+"<small>箱</small>";
+  $("sQ90").innerHTML=t.q90+"<small>箱</small>";
+}
+// 目標只能選大於或等於進化後等級的選項
+function limitTarget(){
+  [...$("target").options].forEach(o=>o.disabled=(+o.value<cur.start));
+  if(cur.target<cur.start) cur.target=cur.start;
+  $("target").value=String(cur.target);
+}
+function setN(n){
+  n=Math.max(0,Math.min(MAXN,Math.round(+n||0))); cur.n=n;
+  if(n>+$("slider").max){ const m=[200,500,1000,2000].find(o=>o>=n); $("maxN").value=m; $("slider").max=m; }
+  $("slider").value=n; $("nInput").value=n; render();
+}
+$("slider").addEventListener("input",e=>setN(e.target.value));
+$("nInput").addEventListener("input",e=>setN(e.target.value));
+$("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
+$("start").addEventListener("change",e=>{cur.start=+e.target.value; limitTarget(); render();});
+$("target").addEventListener("change",e=>{cur.target=Math.max(cur.start,+e.target.value); limitTarget(); render();});
+$("scale").addEventListener("change",render);
+$("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
+
+// 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
+function syncAll(){
+  $("start").value=String(cur.start); limitTarget();
+  $("slider").max=$("maxN").value;
+  setN(cur.n);
+}
+syncAll();
+window.addEventListener("pageshow",syncAll);
+</script>
+</body>
+</html>
