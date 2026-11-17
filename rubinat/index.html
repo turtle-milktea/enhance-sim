@@ -9,15 +9,15 @@
 /* Layout: single column instrument panel — controls, horizontal bar chart (one row per state), stats, rule tables */
 :root{
   --bg:#f5f6f9; --panel:#ffffff; --fg:#1b2030; --muted:#636a80; --line:#dde1ea; --track:#eef0f5;
-  --bar:#4a63c9; --goal:#d98a1c; --pre:#8a90a6;
+  --bar:#4a63c9; --goal:#d98a1c; --pre:#8a90a6; --bad:#c0483c;
   --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
-  --bar:#7d93ee; --goal:#f0a640; --pre:#6c728a; color-scheme:dark}}
+  --bar:#7d93ee; --goal:#f0a640; --pre:#6c728a; --bad:#e9786b; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
-  --bar:#7d93ee; --goal:#f0a640; --pre:#6c728a; color-scheme:dark}
+  --bar:#7d93ee; --goal:#f0a640; --pre:#6c728a; --bad:#e9786b; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
 .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
@@ -51,6 +51,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .stat .v{font-family:var(--mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
 .stat .v small{font-family:var(--sans);font-size:.8rem;font-weight:400;color:var(--muted);margin-left:2px}
 .note{font-size:.85rem;color:var(--muted);line-height:1.6;margin:0}
+.hint{font-size:.82rem;color:var(--muted)}
+.hint.bad{color:var(--bad)}
+td.up{color:var(--goal);font-weight:500}
 details summary{cursor:pointer;font-weight:500}
 details+details{margin-top:14px}
 .tblwrap{overflow-x:auto;margin-top:12px}
@@ -67,7 +70,7 @@ tfoot td{font-weight:600}
 <div class="wrap">
   <header>
     <h1>露比那特飾品材料模擬</h1>
-    <p class="sub">白龍飾品 +15～+20 進化為露比那特飾品 +0～+5，進化需要 250 個暗黑核心；露比那特飾品每次強化成功率 30%，失敗不降級，核心照樣消耗。拖動拉桿，查看開了 n 個暗黑核心箱子後，停在各階段的機率。</p>
+    <p class="sub">白龍飾品 +15～+20 進化為露比那特飾品 +0～+5，進化需要 250 個暗黑核心；露比那特飾品每次強化成功率 30%，失敗不降級，核心照樣消耗。遇到機率活動時，可調整成功率倍率：強化成功率乘上倍率，超過 100% 時以 100% 計，進化不受影響。拖動拉桿，查看開了 n 個暗黑核心箱子後，停在各階段的機率。</p>
   </header>
 
   <section class="panel controls">
@@ -82,6 +85,8 @@ tfoot td{font-weight:600}
     <div class="row">
       <button id="dec">−1</button><button id="inc">+1</button>
       <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="2000" value="0"></span>
+      <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="0.1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
+      <span class="hint" id="multHint"></span>
       <span class="pair"><label for="maxN">拉桿上限</label>
       <select id="maxN" autocomplete="off"><option>200</option><option>500</option><option selected>1000</option><option>2000</option></select></span>
       <span class="pair"><label for="scale">橫軸</label>
@@ -118,15 +123,18 @@ tfoot td{font-weight:600}
 <script>
 // 露比那特 +k → +(k+1) 每次消耗的暗黑核心（k = 0..7）
 const COST=[60,80,110,150,200,215,230,245];
-const EVO=250, PS=0.3, TOP=8, MAXN=2000;
+const EVO=250, BASE_PS=0.3, TOP=8, MAXN=2000;
+const MULT_MIN=0.1, MULT_MAX=10;
+// 強化成功率：基礎 30% 乘上倍率，超過 100% 以 100% 計
+const rateOf=m=>Math.min(1,BASE_PS*m);
 // 暗黑核心箱子：[核心數, 機率%]；冰凝槌子三項合計 3.75%，核心數 0
 const BOX=[[4,22.85],[7,24.9],[10,20.25],[12,10.9],[15,7.0],[18,5.0],[20,2.47],[40,1.2],[45,0.68],[60,0.4],[80,0.3],[90,0.2],[120,0.1],[0,3.75]];
 const OUT=BOX.map(([x,p])=>[x,p/100]);
 const $=id=>document.getElementById(id);
-let cache={}, cur={start:0,target:TOP,n:0};
+let cache={}, cur={start:0,target:TOP,n:0,mult:1};
 
 // 狀態編號：未進化且持有 h 個核心；露比那特 +l 且持有 h 個核心（h < 該階段消耗）；已完成
-function buildChain(start,target){
+function buildChain(start,target,PS){
   const off={}; let D=EVO;
   for(let l=start;l<target;l++){ off[l]=D; D+=COST[l]; }
   // 開完一箱後，依規則立即進化或強化，直到核心不夠為止
@@ -149,9 +157,10 @@ function buildChain(start,target){
 }
 
 // 逐箱推算：記錄 0..MAXN 箱後各階段的機率；期望箱數 = Σ P(n 箱後尚未完成)
-function table(start,target){
-  const key=start+"-"+target; if(cache[key]) return cache[key];
-  const {D,from,to,w,level}=buildChain(start,target), R=TOP+2;
+function table(start,target,m){
+  const key=start+"-"+target+"-"+m; if(cache[key]) return cache[key];
+  const PS=rateOf(m);
+  const {D,from,to,w,level}=buildChain(start,target,PS), R=TOP+2;
   const rows=new Float64Array((MAXN+1)*R);
   let v=new Float64Array(D+1); v[0]=1;
   let E=0, q50=null, q90=null;
@@ -160,8 +169,8 @@ function table(start,target){
     if(n<=MAXN){ for(let i=0;i<=D;i++){ const x=v[i]; if(x) rows[n*R+level[i]+1]+=x; } }
     if(q50===null && done>=0.5) q50=n;
     if(q90===null && done>=0.9) q90=n;
-    if(n>=MAXN && 1-done<1e-13) break;
-    if(n>100000) break;
+    if(n>=MAXN && 1-done<1e-12 && q90!==null) break;
+    if(n>200000) break;
     E+=1-done;
     const nv=new Float64Array(D+1);
     for(let k=0;k<w.length;k++){ const x=v[from[k]]; if(x) nv[to[k]]+=x*w[k]; }
@@ -181,18 +190,22 @@ labels.forEach((t,i)=>{
   r.innerHTML='<div class="hl'+(i===0?' txt':'')+'">'+t+'</div><div class="track"><div class="bar"></div></div><div class="val"></div>';
   chart.appendChild(r); rowsEl.push(r);
 });
+const fmtRate=x=>+(x*100).toFixed(2)+"%";
+function renderRules(){
+  const tb=$("rules").tBodies[0]; tb.innerHTML="";
+  const PS=rateOf(cur.mult), changed=Math.abs(PS-BASE_PS)>1e-12;
+  const add=(a,b,c,d,up)=>{ const tr=tb.insertRow(); [a,b,c,d].forEach((x,i)=>{ const td=tr.insertCell(); td.textContent=x; if(up&&i===1) td.className="up"; }); };
+  add("進化","100%",EVO,EVO,false);
+  COST.forEach((c,k)=>add("+"+k+" → +"+(k+1),fmtRate(PS),c,+(c/PS).toFixed(1),changed));
+}
 {
-  const tb=$("rules").tBodies[0];
-  const add=(a,b,c,d)=>{ const tr=tb.insertRow(); [a,b,c,d].forEach(x=>tr.insertCell().textContent=x); };
-  add("進化","100%",EVO,EVO);
-  COST.forEach((c,k)=>add("+"+k+" → +"+(k+1),"30%",c,(c/PS).toFixed(1)));
   const bb=$("box").tBodies[0];
   BOX.forEach(([x,p])=>{ const tr=bb.insertRow(); tr.insertCell().textContent= x? "暗黑核心 "+x+" 個" : "冰凝槌子（三項合計）"; tr.insertCell().textContent=p+"%"; tr.insertCell().textContent=(x*p/100).toFixed(3); });
 }
 
 const pct=x=>(x*100).toFixed(4)+"%";
 function render(){
-  const s=cur.start, T=cur.target, t=table(s,T), n=cur.n, R=TOP+2, log=$("scale").value==="log";
+  const s=cur.start, T=cur.target, t=table(s,T,cur.mult), n=cur.n, R=TOP+2, log=$("scale").value==="log";
   for(let i=0;i<R;i++){
     const p=t.rows[n*R+i], lv=i-1;
     const wd = log ? (p<=1e-6?0:(Math.log10(p)+6)/6) : p;
@@ -226,11 +239,27 @@ $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
 $("start").addEventListener("change",e=>{cur.start=+e.target.value; limitTarget(); render();});
 $("target").addEventListener("change",e=>{cur.target=Math.max(cur.start,+e.target.value); limitTarget(); render();});
 $("scale").addEventListener("change",render);
+// 倍率：輸入有效時立即套用；無效時保留上一個有效倍率並提示
+function multHint(){
+  const h=$("multHint"); h.className="hint";
+  h.textContent = cur.mult===1 ? "（1 = 無活動）" : "目前 ×"+cur.mult+"，30% → "+fmtRate(rateOf(cur.mult));
+}
+$("mult").addEventListener("input",e=>{
+  const v=parseFloat(e.target.value);
+  if(!(v>=MULT_MIN && v<=MULT_MAX)){
+    const h=$("multHint"); h.className="hint bad"; h.textContent="請輸入 "+MULT_MIN+"～"+MULT_MAX+" 之間的數字，目前仍以 ×"+cur.mult+" 計算"; return;
+  }
+  const m=Math.round(v*10000)/10000;
+  if(m!==cur.mult){ cur.mult=m; cache={}; renderRules(); render(); }
+  multHint();
+});
+$("mult").addEventListener("change",()=>{ $("mult").value=cur.mult; multHint(); });
 $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
 
 // 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
   $("start").value=String(cur.start); limitTarget();
+  $("mult").value=cur.mult; renderRules(); multHint();
   $("slider").max=$("maxN").value;
   setN(cur.n);
 }
