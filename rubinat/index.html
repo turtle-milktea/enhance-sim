@@ -64,14 +64,20 @@ th{color:var(--muted);font-weight:500}
 tfoot td{font-weight:600}
 @media (prefers-reduced-motion: reduce){.bar{transition:none}}
 @media (max-width:480px){.hrow{grid-template-columns:3.9em 1fr 5.8em;gap:6px}.val{font-size:.7rem}th,td{padding:5px 6px}}
+.back{font-size:.88rem;color:var(--bar);text-decoration:none;display:inline-block;margin-bottom:8px}
+.back:hover{text-decoration:underline}
+.back:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
+.meta{font-size:.8rem;color:var(--muted);margin:6px 0 0}
 </style>
 </head>
 <body>
 
 <div class="wrap">
   <header>
+    <a class="back" href="../">← 回到目錄</a>
     <h1>露比那特飾品材料模擬</h1>
     <p class="sub">白龍飾品 +15～+20 進化為露比那特飾品 +0～+5，進化需要 250 個暗黑核心；露比那特飾品每次強化成功率 30%，失敗不降級，核心照樣消耗。遇到機率活動時，可調整成功率倍率（1～10）：強化成功率乘上倍率，超過 100% 時以 100% 計，進化不受影響。可設定要處理的飾品數量（1～4 個）：飾品一個接一個進化並強化，暗黑核心共用，前一個剩下的核心留給下一個。拖動拉桿，查看開了 n 個暗黑核心箱子後，停在各階段的機率（多個飾品時為各階段的飾品數期望值）。</p>
+    <p class="meta">製作日期：2026-11-18</p>
   </header>
 
   <section class="panel controls">

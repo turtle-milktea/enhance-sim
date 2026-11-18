@@ -10,15 +10,15 @@
 /* Layout: single column instrument panel — controls on top, bar chart, then numeric table */
 :root{
   --bg:#f5f6f9; --panel:#ffffff; --fg:#1b2030; --muted:#636a80; --line:#dde1ea;
-  --bar:#4a63c9; --bar-lo:#a9b5e6; --goal:#d98a1c;
+  --bar:#4a63c9; --bar-lo:#a9b5e6; --goal:#d98a1c; --bad:#c0483c;
   --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040;
-  --bar:#7d93ee; --bar-lo:#3e4a7e; --goal:#f0a640; color-scheme:dark}}
+  --bar:#7d93ee; --bar-lo:#3e4a7e; --goal:#f0a640; --bad:#e9786b; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040;
-  --bar:#7d93ee; --bar-lo:#3e4a7e; --goal:#f0a640; color-scheme:dark}
+  --bar:#7d93ee; --bar-lo:#3e4a7e; --goal:#f0a640; --bad:#e9786b; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
 .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
@@ -46,14 +46,31 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .note{font-size:.85rem;color:var(--muted);line-height:1.6;margin:0}
 @media (prefers-reduced-motion: reduce){.bar{transition:none}}
 @media (max-width:480px){.val{font-size:.62rem}.chart{gap:5px}.xl{gap:5px}}
+.back{font-size:.88rem;color:var(--bar);text-decoration:none;display:inline-block;margin-bottom:8px}
+.back:hover{text-decoration:underline}
+.back:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
+.meta{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+.pair{display:inline-flex;gap:8px;align-items:center}
+.hint{font-size:.82rem;color:var(--muted)}
+.hint.bad{color:var(--bad)}
+details summary{cursor:pointer;font-weight:500}
+.tblwrap{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+th,td{padding:5px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+th{color:var(--muted);font-weight:500}
+th:last-child,td:last-child{text-align:left}
+td.up{color:var(--goal);font-weight:500}
+td.dropcell{color:var(--bad);font-weight:500}
 </style>
 </head>
 <body>
 
 <div class="wrap">
   <header>
+    <a class="back" href="../">← 回到目錄</a>
     <h1>凍龍托利斯曼強化規則</h1>
-    <p class="sub">每次強化成功率 10%；+1 以上失敗時，50% 下降一級、50% 不變。到達目標等級即停止（+5 為上限，到達後也停止）。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
+    <p class="sub">以 +10 為起點強化到 +15（模擬器原本的 +0～+5 即遊戲中的 +10～+15）。每次強化成功率 10%；+11 以上失敗時，50% 下降一級、50% 不變；+10 失敗時不變。到達目標等級即停止（+15 為上限，到達後也停止）。遇到機率活動時，可調整成功率倍率（1～10）：成功率乘上倍率，超過 100% 時以 100% 計。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
+    <p class="meta">製作日期：2026-11-03</p>
   </header>
 
   <section class="panel controls">
@@ -61,9 +78,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <div><label>強化次數 n</label><div class="n-big" id="nShow">0</div></div>
       <div class="row">
         <label for="start">起始等級</label>
-        <select id="start" autocomplete="off"><option value="0" selected>+0</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option><option value="4">+4</option></select>
+        <select id="start" autocomplete="off"><option value="0" selected>+10</option><option value="1">+11</option><option value="2">+12</option><option value="3">+13</option><option value="4">+14</option></select>
         <label for="target">目標等級</label>
-        <select id="target" autocomplete="off"><option value="0">+0</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option><option value="4">+4</option><option value="5" selected>+5</option></select>
+        <select id="target" autocomplete="off"><option value="0">+10</option><option value="1">+11</option><option value="2">+12</option><option value="3">+13</option><option value="4">+14</option><option value="5" selected>+15</option></select>
         <label for="maxN">拉桿上限</label>
         <select id="maxN" autocomplete="off"><option>200</option><option selected>1000</option><option>5000</option><option>20000</option></select>
       </div>
@@ -71,9 +88,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <input type="range" id="slider" autocomplete="off" min="0" max="1000" value="0" aria-label="強化次數">
     <div class="row">
       <button id="dec">−1</button><button id="inc">+1</button>
-      <label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="0">
-      <label for="scale">縱軸</label>
-      <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select>
+      <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="0"></span>
+      <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
+      <span class="hint" id="multHint"></span>
+      <span class="pair"><label for="scale">縱軸</label>
+      <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
     </div>
   </section>
 
@@ -89,18 +108,37 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
   </section>
 
-  <p class="note" id="note">對數縱軸以 10⁻⁶ 為下限，方便同時看清楚數量級差很多的機率。橘色長條為目標等級。</p>
+  <p class="note" id="note"></p>
+
+  <section class="panel">
+    <details>
+      <summary>強化規則表</summary>
+      <div class="tblwrap"><table id="rules"><thead><tr><th>強化到</th><th>基礎<br>成功率</th><th>目前<br>成功率</th><th>失敗時</th></tr></thead><tbody></tbody></table></div>
+    </details>
+  </section>
 </div>
 
 <script>
-// 基本轉移規則（不含停止條件）
-const BASE=[[.9,.1,0,0,0,0],[.45,.45,.1,0,0,0],[0,.45,.45,.1,0,0],[0,0,.45,.45,.1,0],[0,0,0,.45,.45,.1],[0,0,0,0,0,1]];
-const MAXN=20000;
+// 內部等級 k = 0..5 對應遊戲中的 +10～+15
+const LV=k=>"+"+(k+10);
+const BASE_S=0.1, MAXN=20000, MULT_MIN=1, MULT_MAX=10;
+// 成功率：基礎 10% 乘上倍率，超過 100% 以 100% 計
+const rateOf=m=>Math.min(1,BASE_S*m);
 const $=id=>document.getElementById(id);
-let cache={}, cur={start:0,target:5,n:0};
+let cache={}, cur={start:0,target:5,n:0,mult:1};
 
-// 目標等級 T 與 +5 皆為吸收態
-function matrix(T){ return BASE.map((r,i)=> (i===T||i===5) ? r.map((_,j)=>+(j===i)) : r.slice()); }
+// 轉移規則：+10 失敗不變；+11 以上失敗時 50% 下降一級、50% 不變；目標等級 T 與 +15 皆為吸收態
+function matrix(T,m){
+  const s=rateOf(m), f=1-s, P=[];
+  for(let i=0;i<6;i++){
+    const r=[0,0,0,0,0,0];
+    if(i===T||i===5){ r[i]=1; }
+    else if(i===0){ r[0]=f; r[1]=s; }
+    else { r[i-1]=f/2; r[i]=f/2; r[i+1]=s; }
+    P.push(r);
+  }
+  return P;
+}
 
 // 解線性方程組（高斯消去，部分選主元）
 function solve(A,b){
@@ -114,9 +152,9 @@ function solve(A,b){
 }
 
 // 從 start 出發：最終到達 T 的機率 h、到達 T 必然時的期望次數 e
-function analytic(start,T){
+function analytic(start,T,m){
   if(start===T) return {h:1,e:0};
-  const P=matrix(T), tr=[0,1,2,3,4,5].filter(i=>i!==T&&i!==5);
+  const P=matrix(T,m), tr=[0,1,2,3,4,5].filter(i=>i!==T&&i!==5);
   const A=tr.map(i=>tr.map(j=>(i===j?1:0)-P[i][j]));
   const h=solve(A,tr.map(i=>P[i][T]));
   const hs=h[tr.indexOf(start)];
@@ -125,9 +163,9 @@ function analytic(start,T){
   return {h:1,e:e[tr.indexOf(start)]};
 }
 
-function table(start,T){
-  const key=start+"-"+T; if(cache[key]) return cache[key];
-  const P=matrix(T), out=new Float64Array((MAXN+1)*6);
+function table(start,T,m){
+  const key=start+"-"+T+"-"+m; if(cache[key]) return cache[key];
+  const P=matrix(T,m), out=new Float64Array((MAXN+1)*6);
   let v=[0,0,0,0,0,0]; v[start]=1;
   for(let n=0;n<=MAXN;n++){
     for(let j=0;j<6;j++) out[n*6+j]=v[j];
@@ -136,36 +174,36 @@ function table(start,T){
     v=w;
   }
   let med=null; for(let n=0;n<=MAXN;n++){ if(out[n*6+T]>0.5){med=n;break;} }
-  return cache[key]={out,med,...analytic(start,T)};
+  return cache[key]={out,med,...analytic(start,T,m)};
 }
 
 const chart=$("chart"), xl=$("xl"), cols=[];
 for(let k=0;k<6;k++){
   const c=document.createElement("div"); c.className="col";
   c.innerHTML='<div class="val"></div><div class="bar"></div>'; chart.appendChild(c); cols.push(c);
-  const l=document.createElement("div"); l.textContent="+"+k; xl.appendChild(l);
+  const l=document.createElement("div"); l.textContent=LV(k); xl.appendChild(l);
 }
 const pct=x=>(x*100).toFixed(4)+"%";
 
 function render(){
-  const T=cur.target, t=table(cur.start,T), n=cur.n, log=$("scale").value==="log";
+  const T=cur.target, t=table(cur.start,T,cur.mult), n=cur.n, log=$("scale").value==="log";
   for(let k=0;k<6;k++){
     const p=t.out[n*6+k];
     let h = log ? (p<=1e-6?0:(Math.log10(p)+6)/6) : p;
     cols[k].classList.toggle("goal",k===T);
     cols[k].querySelector(".bar").style.height=(Math.max(0,h)*88)+"%";
     cols[k].querySelector(".val").textContent=pct(p);
-    cols[k].querySelector(".bar").setAttribute("title","+"+k+"："+pct(p));
+    cols[k].querySelector(".bar").setAttribute("title",LV(k)+"："+pct(p));
   }
   const hit=t.out[n*6+T];
   $("nShow").textContent=n;
-  $("kHit").textContent="已到達 +"+T+"（n 次內）"; $("sHit").textContent=pct(hit);
-  $("kNot").textContent="尚未到達 +"+T;        $("sNot").textContent=pct(1-hit);
+  $("kHit").textContent="已到達 "+LV(T)+"（n 次內）"; $("sHit").textContent=pct(hit);
+  $("kNot").textContent="尚未到達 "+LV(T);        $("sNot").textContent=pct(1-hit);
   if(t.e!==null){ $("kE").textContent="期望總次數（自起點）"; $("sE").textContent=t.e.toFixed(3); }
-  else { $("kE").textContent="最終能到達 +"+T+" 的機率"; $("sE").textContent=pct(t.h); }
+  else { $("kE").textContent="最終能到達 "+LV(T)+" 的機率"; $("sE").textContent=pct(t.h); }
   $("sMed").textContent = t.med!==null ? t.med : (t.h<=0.5 ? "不會超過 50%" : "> "+MAXN);
   $("note").textContent = (T<cur.start
-      ? "目標低於起始等級：代表「掉到 +"+T+"」的機率。若途中先到達 +5 就會停止，因此最終機率可能小於 100%。"
+      ? "目標低於起始等級：代表「掉到 "+LV(T)+"」的機率。若途中先到達 +15 就會停止，因此最終機率可能小於 100%。"
       : T===cur.start ? "目標等於起始等級：第 0 次就已達成。" : "")
     + " 對數縱軸以 10⁻⁶ 為下限。橘色長條為目標等級。";
 }
@@ -180,12 +218,45 @@ $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
 $("start").addEventListener("change",e=>{cur.start=+e.target.value; render();});
 $("target").addEventListener("change",e=>{cur.target=+e.target.value; render();});
 $("scale").addEventListener("change",render);
+// 規則表
+const tb=$("rules").tBodies[0];
+const fmtRate=x=>+(x*100).toFixed(2)+"%";
+function renderRules(){
+  tb.innerHTML="";
+  const s=rateOf(cur.mult);
+  for(let k=1;k<=5;k++){
+    const tr=tb.insertRow();
+    tr.insertCell().textContent=LV(k-1)+" → "+LV(k);
+    tr.insertCell().textContent=fmtRate(BASE_S);
+    const cr=tr.insertCell(); cr.textContent=fmtRate(s); if(Math.abs(s-BASE_S)>1e-12) cr.className="up";
+    const c=tr.insertCell();
+    if(s>=1) c.textContent="—";
+    else if(k>=2){ c.innerHTML="50% 降一級<br>50% 不變"; c.className="dropcell"; }
+    else c.textContent="不變";
+  }
+}
+// 倍率：輸入有效時立即套用；無效時保留上一個有效倍率並提示
+function multHint(){
+  const h=$("multHint"); h.className="hint";
+  h.textContent = cur.mult===1 ? "（1 = 無活動）" : "目前 ×"+cur.mult+"，10% → "+fmtRate(rateOf(cur.mult));
+}
+$("mult").addEventListener("input",e=>{
+  const v=parseFloat(e.target.value);
+  if(!(v>=MULT_MIN && v<=MULT_MAX)){
+    const h=$("multHint"); h.className="hint bad"; h.textContent="請輸入 "+MULT_MIN+"～"+MULT_MAX+" 之間的數字，目前仍以 ×"+cur.mult+" 計算"; return;
+  }
+  const m=Math.round(v*10000)/10000;
+  if(m!==cur.mult){ cur.mult=m; cache={}; renderRules(); render(); }
+  multHint();
+});
+$("mult").addEventListener("change",()=>{ $("mult").value=cur.mult; multHint(); });
 $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
 
 // 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
   $("start").value=String(cur.start);
   $("target").value=String(cur.target);
+  $("mult").value=cur.mult; renderRules(); multHint();
   $("slider").max=$("maxN").value;
   setN(cur.n);
 }

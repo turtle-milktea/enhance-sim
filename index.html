@@ -27,7 +27,8 @@ a.card:hover{border-color:var(--bar)}
 a.card:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
 .name{font-size:1.1rem;font-weight:700;margin:0}
 .desc{grid-column:1;color:var(--muted);font-size:.9rem;line-height:1.6;margin:0;min-width:0}
-.range{grid-row:1/3;grid-column:2;font-family:var(--mono);font-weight:600;color:var(--bar);white-space:nowrap;font-variant-numeric:tabular-nums}
+.date{grid-column:1;color:var(--muted);font-size:.8rem;margin:0;font-variant-numeric:tabular-nums}
+.range{grid-row:1/4;grid-column:2;font-family:var(--mono);font-weight:600;color:var(--bar);white-space:nowrap;font-variant-numeric:tabular-nums}
 .go{color:var(--bar);font-size:.85rem;font-weight:500}
 @media (max-width:480px){a.card{grid-template-columns:1fr}.range{grid-row:auto;grid-column:1}}
 </style>
@@ -41,17 +42,20 @@ a.card:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
   <ul class="list">
     <li><a class="card" href="frozen-dragon/">
       <p class="name">凍龍托利斯曼強化規則</p>
-      <p class="desc">成功率 10%；+1 以上失敗時 50% 下降一級。可選起始與目標等級。</p>
-      <span class="range">+0 → +5</span>
+      <p class="desc">成功率 10%；+11 以上失敗時 50% 下降一級。可調整活動成功率倍率。</p>
+      <p class="date">製作日期 2026-11-03</p>
+      <span class="range">+10 → +15</span>
     </a></li>
     <li><a class="card" href="bone-dragon/">
       <p class="name">骨龍裝強化</p>
       <p class="desc">依各階段成功率計算；強化到 +12、+14、+16、+18、+20 失敗時 50% 下降一級。可調整活動成功率倍率。</p>
+      <p class="date">製作日期 2026-11-12</p>
       <span class="range">+0 → +20</span>
     </a></li>
     <li><a class="card" href="rubinat/">
       <p class="name">露比那特飾品材料</p>
       <p class="desc">白龍飾品 +15～+20 進化並強化所需的暗黑核心箱子數；可設定飾品數量 1～4 個與活動成功率倍率。</p>
+      <p class="date">製作日期 2026-11-18</p>
       <span class="range">+0 → +8</span>
     </a></li>
   </ul>
