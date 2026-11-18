@@ -24,6 +24,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--sans);
 .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 h1{font-size:1.45rem;margin:0;text-wrap:balance}
 .sub{color:var(--muted);margin:4px 0 0;line-height:1.6}
+ol.rules-list{padding-left:1.5em;margin:8px 0 0;display:flex;flex-direction:column;gap:2px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
 .controls{display:flex;flex-direction:column;gap:14px}
 .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
@@ -69,7 +70,13 @@ td.dropcell{color:var(--bad);font-weight:500}
   <header>
     <a class="back" href="../">← 回到目錄</a>
     <h1>凍龍托利斯曼強化規則</h1>
-    <p class="sub">以 +10 為起點強化到 +15（模擬器原本的 +0～+5 即遊戲中的 +10～+15）。每次強化成功率 10%；+11 以上失敗時，50% 下降一級、50% 不變；+10 失敗時不變。到達目標等級即停止（+15 為上限，到達後也停止）。遇到機率活動時，可調整成功率倍率（1～10）：成功率乘上倍率，超過 100% 時以 100% 計。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
+    <ol class="sub rules-list">
+      <li>以 +10 為起點強化到 +15（舊版模擬器的 +0～+5 即 +10～+15）。</li>
+      <li>每次強化成功率 10%；+11 以上失敗時，50% 下降一級、50% 不變；+10 失敗時不變。</li>
+      <li>到達目標等級即停止（+15 為上限，到達後也停止）。</li>
+      <li>遇到機率活動時，可調整成功率倍率（1～10）：成功率乘上倍率，超過 100% 時以 100% 計。</li>
+      <li>拖動拉桿，查看強化 n 次後停在各等級的機率。</li>
+    </ol>
     <p class="meta">製作日期：2026-11-03</p>
   </header>
 

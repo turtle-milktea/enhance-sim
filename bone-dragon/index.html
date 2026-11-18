@@ -23,6 +23,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--sans);
 .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 h1{font-size:1.45rem;margin:0;text-wrap:balance}
 .sub{color:var(--muted);margin:4px 0 0;line-height:1.6}
+ol.rules-list{padding-left:1.5em;margin:8px 0 0;display:flex;flex-direction:column;gap:2px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
 .controls{display:flex;flex-direction:column;gap:14px}
 .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
@@ -87,7 +88,14 @@ h2{font-size:1rem;margin:0 0 8px}
   <header>
     <a class="back" href="../">← 回到目錄</a>
     <h1>骨龍・金龍裝備強化模擬</h1>
-    <p class="sub">依強化表計算，不考慮破壞（果凍數量照常計算）。每次強化不論成功或失敗都會消耗材料。骨龍：強化到 +12、+14、+16、+18、+20 失敗時，50% 下降一級、50% 不變。金龍：強化到 +15、+17、+19 失敗時，50% 下降一級、50% 不變。骨龍 +15 以上可以進化為金龍 +10（進化不算一次強化），金龍不能換回骨龍。遇到機率活動時，可調整成功率倍率（1～10）：所有成功率未滿 100% 的階段都乘上倍率，超過 100% 時以 100% 計。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
+    <ol class="sub rules-list">
+      <li>依強化表計算，不考慮破壞（果凍數量照常計算）。每次強化不論成功或失敗都會消耗材料。</li>
+      <li>骨龍：強化到 +12、+14、+16、+18、+20 失敗時，50% 下降一級、50% 不變。</li>
+      <li>金龍：強化到 +15、+17、+19 失敗時，50% 下降一級、50% 不變。</li>
+      <li>骨龍 +15 以上可以進化為金龍 +10（進化不算一次強化），金龍不能換回骨龍。</li>
+      <li>遇到機率活動時，可調整成功率倍率（1～10）：所有成功率未滿 100% 的階段都乘上倍率，超過 100% 時以 100% 計。</li>
+      <li>拖動拉桿，查看強化 n 次後停在各等級的機率。</li>
+    </ol>
     <p class="meta">製作日期：2026-11-12・更新日期：2026-11-18</p>
   </header>
 
