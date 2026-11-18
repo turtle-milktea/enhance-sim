@@ -73,6 +73,9 @@ td.dropcell{color:var(--drop);font-weight:500}
 .mats table td:first-child{font-family:var(--sans)}
 .mats tfoot td{font-weight:600}
 .mats td.sum{font-weight:600}
+.mats td.now{font-weight:600;color:var(--bar)}
+.matsNote{font-size:.8rem;color:var(--muted);margin:8px 0 0;line-height:1.6}
+@media (max-width:480px){.mats table{font-size:.74rem}.mats th,.mats td{padding:5px 4px}.mats td:first-child,.mats th{white-space:normal}.mats td:first-child{min-width:4.5em}}
 .mats table td:not(:first-child),.mats table th:not(:first-child){text-align:right}
 h2{font-size:1rem;margin:0 0 8px}
 .rulesH{font-size:.92rem;font-weight:600;margin:16px 0 0}
@@ -123,6 +126,7 @@ h2{font-size:1rem;margin:0 0 8px}
   <section class="panel mats">
     <h2 id="matsTitle">材料期望值</h2>
     <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <p class="matsNote">「到第 n 次為止」：強化 n 次時平均已消耗的材料（到達目標後就停止強化，n 夠大時會等於「全部完成」）。進化材料以「n 次內已進化的機率」計入。其餘欄位為從起點到完成的期望值。</p>
   </section>
 
   <p class="note" id="note">對數橫軸以 10⁻⁶ 為下限。橘色為目標，金色為金龍階段。進化發生在到達進化時機的當下，不佔用強化次數。</p>
@@ -230,9 +234,17 @@ function table(c){
   // 逐次推算 0..MAXN 次後的分布
   const out=new Float64Array((MAXN+1)*S); let v=new Float64Array(S); v[s0]=1;
   let med=null;
+  // 到第 n 次為止的材料消耗期望值：前 n 次強化各自的消耗，加上「n 次內已進化的機率 × 進化材料」
+  const MK=MAT_ORDER.length, cost=MAT_ORDER.map(()=>new Float64Array(S)), goldIdx=[];
+  states.forEach((st,i)=>{ const {eq,lv}=parse(st); if(eq==="gold") goldIdx.push(i); if(i===g) return;
+    MAT_ORDER.forEach((m,a)=>{ const arr=EQ[eq].mat[c.part][m]; if(arr) cost[a][i]=arr[lv+1]; }); });
+  const evoAmt=MAT_ORDER.map(m=>segs.length===2?(EVOLVE[m]||0):0);
+  const cum=new Float64Array((MAXN+1)*MK), run=new Float64Array(MK);
   for(let n=0;n<=MAXN;n++){
     out.set(v,n*S);
     if(med===null && v[g]>0.5) med=n;
+    let pe=0; if(segs.length===2) for(const i of goldIdx) pe+=v[i];
+    for(let a=0;a<MK;a++){ cum[n*MK+a]=run[a]+pe*evoAmt[a]; let t=0; const ca=cost[a]; for(let i=0;i<S;i++) if(ca[i]) t+=v[i]*ca[i]; run[a]+=t; }
     const w=new Float64Array(S);
     for(let i=0;i<S;i++){ const x=v[i]; if(!x) continue; for(const [j,p] of T[i]) w[j]+=x*p; }
     v=w;
@@ -251,7 +263,7 @@ function table(c){
   states.forEach((s,i)=>{ if(i===g||!visits[i]) return; const {eq,lv}=parse(s);
     for(const [m,arr] of Object.entries(EQ[eq].mat[c.part])) if(arr[lv+1]) mats[eq][m]=(mats[eq][m]||0)+visits[i]*arr[lv+1]; });
   if(segs.length===2) for(const [m,q] of Object.entries(EVOLVE)) mats.evo[m]=q;
-  return cache[ck]={states,out,S,g,med,E,mats,evolves:segs.length===2};
+  return cache[ck]={states,out,S,g,med,E,mats,cum,evolves:segs.length===2};
 }
 
 // ===== 選單 =====
@@ -312,10 +324,11 @@ function render(){
   const cols=[["骨龍強化","bone"],["進化","evo"],["金龍強化","gold"]].filter(([,k])=>Object.keys(t.mats[k]).length || (k==="evo"&&t.evolves));
   const used=MAT_ORDER.filter(m=>cols.some(([,k])=>t.mats[k][m]));
   const tbl=$("mats");
-  tbl.tHead.innerHTML="<tr><th>材料</th>"+(cols.length>1?"<th>合計</th>":"")+cols.map(([h])=>"<th>"+h+"</th>").join("")+"</tr>";
+  tbl.tHead.innerHTML="<tr><th>材料</th><th>到第 "+n+" 次為止</th><th>全部完成</th>"+(cols.length>1?cols.map(([h])=>"<th>"+h+"</th>").join(""):"")+"</tr>";
   tbl.tBodies[0].innerHTML=used.map(m=>{
     const vals=cols.map(([,k])=>t.mats[k][m]||0), sum=vals.reduce((a,b)=>a+b,0);
-    return "<tr><td>"+m+"</td>"+(cols.length>1?'<td class="sum">'+fmt(sum)+"</td>":"")+vals.map(v=>"<td>"+(v?fmt(v):"—")+"</td>").join("")+"</tr>";
+    const atN=t.cum[n*MAT_ORDER.length+MAT_ORDER.indexOf(m)];
+    return "<tr><td>"+m+'</td><td class="now">'+(atN?fmt(atN):"0")+'</td><td class="sum">'+fmt(sum)+"</td>"+(cols.length>1?vals.map(v=>"<td>"+(v?fmt(v):"—")+"</td>").join(""):"")+"</tr>";
   }).join("");
 }
 
