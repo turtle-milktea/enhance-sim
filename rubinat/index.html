@@ -45,6 +45,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .hrow.goal .bar{background:var(--goal)}
 .hrow.goal .hl{color:var(--goal)}
 .hrow.off{opacity:.38}
+.hchart.busy{opacity:.45}
 .val{font-family:var(--mono);font-size:.78rem;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
 .stat .k{font-size:.82rem;color:var(--muted)}
@@ -70,7 +71,7 @@ tfoot td{font-weight:600}
 <div class="wrap">
   <header>
     <h1>露比那特飾品材料模擬</h1>
-    <p class="sub">白龍飾品 +15～+20 進化為露比那特飾品 +0～+5，進化需要 250 個暗黑核心；露比那特飾品每次強化成功率 30%，失敗不降級，核心照樣消耗。遇到機率活動時，可調整成功率倍率：強化成功率乘上倍率，超過 100% 時以 100% 計，進化不受影響。拖動拉桿，查看開了 n 個暗黑核心箱子後，停在各階段的機率。</p>
+    <p class="sub">白龍飾品 +15～+20 進化為露比那特飾品 +0～+5，進化需要 250 個暗黑核心；露比那特飾品每次強化成功率 30%，失敗不降級，核心照樣消耗。遇到機率活動時，可調整成功率倍率：強化成功率乘上倍率，超過 100% 時以 100% 計，進化不受影響。可設定要處理的飾品數量（1～4 個）：飾品一個接一個進化並強化，暗黑核心共用，前一個剩下的核心留給下一個。拖動拉桿，查看開了 n 個暗黑核心箱子後，停在各階段的機率（多個飾品時為各階段的飾品數期望值）。</p>
   </header>
 
   <section class="panel controls">
@@ -79,23 +80,25 @@ tfoot td{font-weight:600}
       <div class="row">
         <span class="pair"><label for="start">白龍飾品</label><select id="start" autocomplete="off"></select></span>
         <span class="pair"><label for="target">目標</label><select id="target" autocomplete="off"></select></span>
+        <span class="pair"><label for="count">飾品數量</label><select id="count" autocomplete="off"><option value="1" selected>1 個</option><option value="2">2 個</option><option value="3">3 個</option><option value="4">4 個</option></select></span>
       </div>
     </div>
     <input type="range" id="slider" autocomplete="off" min="0" max="1000" value="0" aria-label="已開箱數">
     <div class="row">
       <button id="dec">−1</button><button id="inc">+1</button>
-      <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="2000" value="0"></span>
+      <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="5000" value="0"></span>
       <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="0.1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
       <span class="hint" id="multHint"></span>
       <span class="pair"><label for="maxN">拉桿上限</label>
-      <select id="maxN" autocomplete="off"><option>200</option><option>500</option><option selected>1000</option><option>2000</option></select></span>
+      <select id="maxN" autocomplete="off"><option>200</option><option>500</option><option selected>1000</option><option>2000</option><option>5000</option></select></span>
       <span class="pair"><label for="scale">橫軸</label>
       <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
     </div>
   </section>
 
   <section class="panel">
-    <div class="hchart" id="chart" role="img" aria-label="開箱後停在各階段的機率"></div>
+    <p class="note" id="chartCap" style="margin-bottom:10px"></p>
+    <div class="hchart" id="chart" role="img" aria-label="開箱後停在各階段的機率或飾品數"></div>
   </section>
 
   <section class="panel stats">
@@ -106,7 +109,7 @@ tfoot td{font-weight:600}
     <div class="stat"><div class="k">90% 機率完成所需箱數</div><div class="v" id="sQ90"></div></div>
   </section>
 
-  <p class="note">每箱平均 10 個暗黑核心。期望箱數略高於「期望核心 ÷ 10」，因為最後一箱湊夠核心時通常會多出一些，完成時會剩下用不到的核心。開箱多出的核心會保留到下一次強化。冰凝槌子不提供核心。對數橫軸以 10⁻⁶ 為下限。橘色為目標。</p>
+  <p class="note">每箱平均 10 個暗黑核心。期望箱數略高於「期望核心 ÷ 10」，因為最後一箱湊夠核心時通常會多出一些，完成時會剩下用不到的核心。開箱多出的核心會保留到下一次強化或下一個飾品。冰凝槌子不提供核心。對數橫軸以 10⁻⁶ 為下限。橘色為目標。</p>
 
   <section class="panel">
     <details>
@@ -123,7 +126,7 @@ tfoot td{font-weight:600}
 <script>
 // 露比那特 +k → +(k+1) 每次消耗的暗黑核心（k = 0..7）
 const COST=[60,80,110,150,200,215,230,245];
-const EVO=250, BASE_PS=0.3, TOP=8, MAXN=2000;
+const EVO=250, BASE_PS=0.3, TOP=8, MAXN=5000, KMAX=4;
 const MULT_MIN=0.1, MULT_MAX=10;
 // 強化成功率：基礎 30% 乘上倍率，超過 100% 以 100% 計
 const rateOf=m=>Math.min(1,BASE_PS*m);
@@ -131,53 +134,89 @@ const rateOf=m=>Math.min(1,BASE_PS*m);
 const BOX=[[4,22.85],[7,24.9],[10,20.25],[12,10.9],[15,7.0],[18,5.0],[20,2.47],[40,1.2],[45,0.68],[60,0.4],[80,0.3],[90,0.2],[120,0.1],[0,3.75]];
 const OUT=BOX.map(([x,p])=>[x,p/100]);
 const $=id=>document.getElementById(id);
-let cache={}, cur={start:0,target:TOP,n:0,mult:1};
+let cache={}, cur={start:0,target:TOP,n:0,mult:1,count:1};
 
-// 狀態編號：未進化且持有 h 個核心；露比那特 +l 且持有 h 個核心（h < 該階段消耗）；已完成
-function buildChain(start,target,PS){
-  const off={}; let D=EVO;
-  for(let l=start;l<target;l++){ off[l]=D; D+=COST[l]; }
-  // 開完一箱後，依規則立即進化或強化，直到核心不夠為止
-  function settle(l,h,p,acc){
-    if(l<0){ if(h<EVO){ acc.set(h,(acc.get(h)||0)+p); return; } l=start; h-=EVO; }
-    if(l>=target){ acc.set(D,(acc.get(D)||0)+p); return; }
-    if(h<COST[l]){ const i=off[l]+h; acc.set(i,(acc.get(i)||0)+p); return; }
-    h-=COST[l]; settle(l+1,h,p*PS,acc); settle(l,h,p*(1-PS),acc);
-  }
-  const from=[], to=[], w=[], level=new Int8Array(D+1);
-  const states=[]; for(let h=0;h<EVO;h++) states.push([-1,h]);
-  for(let l=start;l<target;l++) for(let h=0;h<COST[l];h++) states.push([l,h]);
-  states.forEach(([l,h],i)=>{
-    level[i]=l;
-    const acc=new Map(); for(const [x,q] of OUT) settle(l,h+x,q,acc);
-    for(const [j,p] of acc){ from.push(i); to.push(j); w.push(p); }
-  });
-  level[D]=target; from.push(D); to.push(D); w.push(1);
-  return {D,from:Int32Array.from(from),to:Int32Array.from(to),w:Float64Array.from(w),level};
+// 計算核心在背景執行緒（Web Worker）中執行，計算時畫面不會停住
+function engine(){
+  self.onmessage=e=>{
+    const {id,start,target,PS,K,COST,OUT,EVO,TOP,MAXN}=e.data;
+    // 狀態：第 j 個飾品未進化且持有 h 個核心，或為露比那特 +l 且持有 h 個核心（h < 該階段消耗）；最後一個為全部完成
+    const off={}; let B=EVO;
+    for(let l=start;l<target;l++){ off[l]=B; B+=COST[l]; }
+    const D=K*B;
+    const add=(acc,i,p)=>acc.set(i,(acc.get(i)||0)+p);
+    // 開完一箱後，依規則立即進化或強化，直到核心不夠為止；一個飾品完成後，剩下的核心接著用在下一個
+    function settle(j,l,h,p,acc){
+      if(l<0){ if(h<EVO){ add(acc,j*B+h,p); return; } l=start; h-=EVO; }
+      if(l>=target){ if(j+1<K) settle(j+1,-1,h,p,acc); else add(acc,D,p); return; }
+      if(h<COST[l]){ add(acc,j*B+off[l]+h,p); return; }
+      h-=COST[l]; settle(j,l+1,h,p*PS,acc); settle(j,l,h,p*(1-PS),acc);
+    }
+    const one=[]; for(let h=0;h<EVO;h++) one.push([-1,h]);
+    for(let l=start;l<target;l++) for(let h=0;h<COST[l];h++) one.push([l,h]);
+    const rowOf=new Int8Array(D), blk=new Int8Array(D), ptr=[0], to=[], w=[];
+    for(let j=0;j<K;j++) one.forEach(([l,h],i0)=>{
+      const i=j*B+i0; rowOf[i]=l+1; blk[i]=j;
+      const acc=new Map(); for(const [x,q] of OUT) settle(j,l,h+x,q,acc);
+      for(const [t,p] of acc){ to.push(t); w.push(p); }
+      ptr.push(to.length);
+    });
+    const P=Int32Array.from(ptr), T=Int32Array.from(to), W=Float64Array.from(w);
+    // 逐箱推算到 MAXN 箱（或已幾乎必定完成），記錄各階段的飾品數期望值與全部完成的機率
+    const R=TOP+2, G=target+1, rows=new Float64Array((MAXN+1)*R), doneAt=new Float64Array(MAXN+1);
+    let v=new Float64Array(D+1), nv=new Float64Array(D+1); v[0]=1;
+    let q50=null, q90=null, n=0;
+    for(;n<=MAXN;n++){
+      const done=v[D], o=n*R; doneAt[n]=done;
+      for(let i=0;i<D;i++){ const x=v[i]; if(!x) continue; rows[o+rowOf[i]]+=x; rows[o+G]+=x*blk[i]; rows[o]+=x*(K-1-blk[i]); }
+      rows[o+G]+=done*K;
+      if(q50===null && done>=0.5) q50=n;
+      if(q90===null && done>=0.9) q90=n;
+      if(1-done<1e-13) break;
+      if(n===MAXN) break;
+      nv.fill(0); nv[D]=done;
+      for(let i=0;i<D;i++){ const x=v[i]; if(!x) continue; for(let k=P[i];k<P[i+1];k++) nv[T[k]]+=x*W[k]; }
+      const t=v; v=nv; nv=t;
+    }
+    for(let m=n+1;m<=MAXN;m++){ rows[m*R+G]=K; doneAt[m]=1; }
+    // 期望箱數（精確）：強化成敗與開箱結果互相獨立，完成時的箱數 = 累積核心第一次 ≥ 總消耗 C 的那一箱
+    // 所以 E[箱數] = Σ_c P(C=c)·U(c)，U(c) 為「累積核心仍少於 c」的期望箱數
+    const STEP=5;                       // 所有消耗都是 5 的倍數
+    let dist=new Float64Array([1]);
+    function shift(d,k){ const g=new Float64Array(d.length+k); g.set(d,k); return g; }
+    function addGeo(d,c){              // 加上「該階段嘗試次數 × 每次消耗」，嘗試次數 ~ 幾何分布（成功率 PS）
+      c/=STEP;
+      if(PS>=1) return shift(d,c);
+      const kmax=Math.ceil(Math.log(1e-17)/Math.log(1-PS))+1, L=d.length+c*kmax, g=new Float64Array(L);
+      for(let i=c;i<L;i++) g[i]=PS*(i-c<d.length?d[i-c]:0)+(1-PS)*g[i-c];
+      let tail=0, end=L; while(end>1 && tail+g[end-1]<1e-16){ tail+=g[end-1]; end--; }
+      return g.slice(0,end);
+    }
+    for(let j=0;j<K;j++){ dist=shift(dist,EVO/STEP); for(let l=start;l<target;l++) dist=addGeo(dist,COST[l]); }
+    const Cmax=(dist.length-1)*STEP, U=new Float64Array(Cmax+1);
+    let p0=0; const pos=[]; for(const [x,q] of OUT){ if(x===0) p0+=q; else pos.push([x,q]); }
+    for(let c=1;c<=Cmax;c++){ let s=1; for(const [x,q] of pos){ if(c-x>0) s+=q*U[c-x]; } U[c]=s/(1-p0); }
+    let E=0; for(let i=0;i<dist.length;i++) if(dist[i]) E+=dist[i]*U[i*STEP];
+    self.postMessage({id,rows,doneAt,E,q50,q90},[rows.buffer,doneAt.buffer]);
+  };
 }
-
-// 逐箱推算：記錄 0..MAXN 箱後各階段的機率；期望箱數 = Σ P(n 箱後尚未完成)
-function table(start,target,m){
-  const key=start+"-"+target+"-"+m; if(cache[key]) return cache[key];
-  const PS=rateOf(m);
-  const {D,from,to,w,level}=buildChain(start,target,PS), R=TOP+2;
-  const rows=new Float64Array((MAXN+1)*R);
-  let v=new Float64Array(D+1); v[0]=1;
-  let E=0, q50=null, q90=null;
-  for(let n=0;;n++){
-    const done=v[D];
-    if(n<=MAXN){ for(let i=0;i<=D;i++){ const x=v[i]; if(x) rows[n*R+level[i]+1]+=x; } }
-    if(q50===null && done>=0.5) q50=n;
-    if(q90===null && done>=0.9) q90=n;
-    if(n>=MAXN && 1-done<1e-12 && q90!==null) break;
-    if(n>200000) break;
-    E+=1-done;
-    const nv=new Float64Array(D+1);
-    for(let k=0;k<w.length;k++){ const x=v[from[k]]; if(x) nv[to[k]]+=x*w[k]; }
-    v=nv;
-  }
-  let cores=EVO; for(let l=start;l<target;l++) cores+=COST[l]/PS;
-  return cache[key]={rows,E,q50,q90,cores};
+let worker=null, pending=null, reqId=0;
+function request(key,start,target,m,K){
+  if(pending && pending.key===key) return;
+  if(worker && pending) { worker.terminate(); worker=null; }   // 設定又改了：放棄上一個計算
+  if(!worker) worker=new Worker(URL.createObjectURL(new Blob(["("+engine.toString()+")()"],{type:"text/javascript"})));
+  const id=++reqId; pending={key,id};
+  worker.onmessage=e=>{
+    if(!pending || e.data.id!==pending.id) return;
+    let cores=EVO; for(let l=start;l<target;l++) cores+=COST[l]/rateOf(m);
+    cache[key]={...e.data,cores:cores*K}; pending=null; render();
+  };
+  worker.postMessage({id,start,target,PS:rateOf(m),K,COST,OUT,EVO,TOP,MAXN});
+}
+function table(start,target,m,K){
+  const key=[start,target,m,K].join("-");
+  if(cache[key]) return cache[key];
+  request(key,start,target,m,K); return null;
 }
 
 // 選單、圖表列與規則表
@@ -204,23 +243,30 @@ function renderRules(){
 }
 
 const pct=x=>(x*100).toFixed(4)+"%";
+const cnt=x=>x.toFixed(4)+" 個";
 function render(){
-  const s=cur.start, T=cur.target, t=table(s,T,cur.mult), n=cur.n, R=TOP+2, log=$("scale").value==="log";
+  const s=cur.start, T=cur.target, K=cur.count, t=table(s,T,cur.mult,K), n=cur.n, R=TOP+2, log=$("scale").value==="log";
+  $("nShow").textContent=n;
+  document.body.dataset.state = t ? "ready" : "busy";
+  $("chart").classList.toggle("busy",!t);
+  if(!t){ ["sDone","sEBox","sECore","sQ50","sQ90"].forEach(id=>$(id).textContent="計算中…"); return; }
   for(let i=0;i<R;i++){
-    const p=t.rows[n*R+i], lv=i-1;
-    const wd = log ? (p<=1e-6?0:(Math.log10(p)+6)/6) : p;
+    const c=t.rows[n*R+i], f=c/K, lv=i-1;   // c：飾品數期望值；f：佔全部飾品的比例
+    const wd = log ? (f<=1e-6?0:(Math.log10(f)+6)/6) : f;
+    const txt = K===1 ? pct(c) : cnt(c);
     rowsEl[i].classList.toggle("goal",lv===T);
     rowsEl[i].classList.toggle("off", i>0 && (lv<s || lv>T));
     rowsEl[i].querySelector(".bar").style.width=(Math.max(0,Math.min(1,wd))*100)+"%";
-    rowsEl[i].querySelector(".val").textContent=pct(p);
-    rowsEl[i].title=labels[i]+"："+pct(p);
+    rowsEl[i].querySelector(".val").textContent=txt;
+    rowsEl[i].title=labels[i]+"："+txt;
   }
-  $("nShow").textContent=n;
-  $("kDone").textContent="已到達 +"+T+"（"+n+" 箱內）"; $("sDone").textContent=pct(t.rows[n*R+T+1]);
+  $("chartCap").textContent = K===1 ? "開到第 n 箱時，飾品停在各階段的機率" : "開到第 n 箱時，"+K+" 個飾品分別停在各階段的個數（期望值，合計 "+K+" 個）";
+  $("kDone").textContent=(K===1?"已到達 +":K+" 個都到達 +")+T+"（"+n+" 箱內）"; $("sDone").textContent=pct(t.doneAt[n]);
   $("sEBox").innerHTML=t.E.toFixed(2)+"<small>箱</small>";
   $("sECore").innerHTML=t.cores.toFixed(2)+"<small>個</small>";
-  $("sQ50").innerHTML=t.q50+"<small>箱</small>";
-  $("sQ90").innerHTML=t.q90+"<small>箱</small>";
+  const q=x=> x===null ? "超過 "+MAXN+"<small>箱</small>" : x+"<small>箱</small>";
+  $("sQ50").innerHTML=q(t.q50);
+  $("sQ90").innerHTML=q(t.q90);
 }
 // 目標只能選大於或等於進化後等級的選項
 function limitTarget(){
@@ -230,7 +276,7 @@ function limitTarget(){
 }
 function setN(n){
   n=Math.max(0,Math.min(MAXN,Math.round(+n||0))); cur.n=n;
-  if(n>+$("slider").max){ const m=[200,500,1000,2000].find(o=>o>=n); $("maxN").value=m; $("slider").max=m; }
+  if(n>+$("slider").max){ const m=[200,500,1000,2000,5000].find(o=>o>=n); $("maxN").value=m; $("slider").max=m; }
   $("slider").value=n; $("nInput").value=n; render();
 }
 $("slider").addEventListener("input",e=>setN(e.target.value));
@@ -239,6 +285,7 @@ $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
 $("start").addEventListener("change",e=>{cur.start=+e.target.value; limitTarget(); render();});
 $("target").addEventListener("change",e=>{cur.target=Math.max(cur.start,+e.target.value); limitTarget(); render();});
 $("scale").addEventListener("change",render);
+$("count").addEventListener("change",e=>{cur.count=Math.max(1,Math.min(KMAX,+e.target.value||1)); render();});
 // 倍率：輸入有效時立即套用；無效時保留上一個有效倍率並提示
 function multHint(){
   const h=$("multHint"); h.className="hint";
@@ -259,6 +306,7 @@ $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.
 // 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
   $("start").value=String(cur.start); limitTarget();
+  $("count").value=String(cur.count);
   $("mult").value=cur.mult; renderRules(); multHint();
   $("slider").max=$("maxN").value;
   setN(cur.n);
