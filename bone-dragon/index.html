@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>骨龍裝強化模擬</title>
+<title>骨龍・金龍裝備強化模擬</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 /* Layout: single column instrument panel — controls, horizontal bar chart (one row per level), stats, rule table */
 :root{
   --bg:#f5f6f9; --panel:#ffffff; --fg:#1b2030; --muted:#636a80; --line:#dde1ea; --track:#eef0f5;
-  --bar:#4a63c9; --goal:#d98a1c; --drop:#c0483c;
+  --bar:#4a63c9; --goal:#d98a1c; --drop:#c0483c; --gold:#b48a1e;
   --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
-  --bar:#7d93ee; --goal:#f0a640; --drop:#e9786b; color-scheme:dark}}
+  --bar:#7d93ee; --goal:#f0a640; --drop:#e9786b; --gold:#d8b552; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
-  --bar:#7d93ee; --goal:#f0a640; --drop:#e9786b; color-scheme:dark}
+  --bar:#7d93ee; --goal:#f0a640; --drop:#e9786b; --gold:#d8b552; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
 .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
@@ -34,7 +34,7 @@ select{width:auto;font-family:var(--sans)}
 button{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
 .hchart{display:flex;flex-direction:column;gap:3px}
-.hrow{display:grid;grid-template-columns:2.6em 1fr 6.6em;gap:8px;align-items:center}
+.hrow{display:grid;grid-template-columns:5.6em 1fr 6.6em;gap:8px;align-items:center}
 .hl{font-family:var(--mono);font-weight:600;text-align:right;font-size:.85rem}
 .track{height:14px;background:var(--track);border-radius:3px;overflow:hidden}
 .bar{height:100%;width:0;background:var(--bar);border-radius:3px;transition:width .12s ease-out}
@@ -57,11 +57,25 @@ th,td{padding:5px 10px;border-bottom:1px solid var(--line);text-align:center;whi
 th{color:var(--muted);font-weight:500}
 td.dropcell{color:var(--drop);font-weight:500}
 @media (prefers-reduced-motion: reduce){.bar{transition:none}}
-@media (max-width:480px){.hrow{grid-template-columns:2.4em 1fr 5.8em;gap:6px}.val{font-size:.7rem}th,td{padding:5px 6px}}
+@media (max-width:480px){.hrow{grid-template-columns:5em 1fr 5.8em;gap:6px}.val{font-size:.7rem}th,td{padding:5px 6px}}
 .back{font-size:.88rem;color:var(--bar);text-decoration:none;display:inline-block;margin-bottom:8px}
 .back:hover{text-decoration:underline}
 .back:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
 .meta{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+.hl .eq{font-family:var(--sans);font-weight:500;color:var(--muted);margin-right:4px}
+.hrow.gold .bar{background:var(--gold)}
+.hrow.goal .bar{background:var(--goal)}
+.sep{height:1px;background:var(--line);margin:6px 0}
+.sepl{font-size:.78rem;color:var(--muted);margin:2px 0 4px}
+.mats{margin-top:6px}
+.mats table td:first-child,.mats table th:first-child{text-align:left}
+.mats table td{font-family:var(--mono)}
+.mats table td:first-child{font-family:var(--sans)}
+.mats tfoot td{font-weight:600}
+.mats td.sum{font-weight:600}
+.mats table td:not(:first-child),.mats table th:not(:first-child){text-align:right}
+h2{font-size:1rem;margin:0 0 8px}
+.rulesH{font-size:.92rem;font-weight:600;margin:16px 0 0}
 </style>
 </head>
 <body>
@@ -69,19 +83,19 @@ td.dropcell{color:var(--drop);font-weight:500}
 <div class="wrap">
   <header>
     <a class="back" href="../">← 回到目錄</a>
-    <h1>骨龍裝強化機率分布</h1>
-    <p class="sub">依強化表計算，不考慮破壞。強化到 +12、+14、+16、+18、+20 失敗時，50% 下降一級、50% 不變；其他階段失敗時等級不變。到達目標等級即停止（+20 為上限）。遇到機率活動時，可調整成功率倍率（1～10）：所有成功率未滿 100% 的階段都乘上倍率，超過 100% 時以 100% 計。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
-    <p class="meta">製作日期：2026-11-12</p>
+    <h1>骨龍・金龍裝備強化模擬</h1>
+    <p class="sub">依強化表計算，不考慮破壞（果凍數量照常計算）。每次強化不論成功或失敗都會消耗材料。骨龍：強化到 +12、+14、+16、+18、+20 失敗時，50% 下降一級、50% 不變。金龍：強化到 +15、+17、+19 失敗時，50% 下降一級、50% 不變。骨龍 +15 以上可以進化為金龍 +10（進化不算一次強化），金龍不能換回骨龍。遇到機率活動時，可調整成功率倍率（1～10）：所有成功率未滿 100% 的階段都乘上倍率，超過 100% 時以 100% 計。拖動拉桿，查看強化 n 次後停在各等級的機率。</p>
+    <p class="meta">製作日期：2026-11-12・更新日期：2026-11-18</p>
   </header>
 
   <section class="panel controls">
     <div class="row" style="justify-content:space-between">
       <div><label>強化次數 n</label><div class="n-big" id="nShow">0</div></div>
       <div class="row">
-        <label for="start">起始等級</label><select id="start" autocomplete="off"></select>
-        <label for="target">目標等級</label><select id="target" autocomplete="off"></select>
-        <label for="maxN">拉桿上限</label>
-        <select id="maxN" autocomplete="off"><option>200</option><option>1000</option><option selected>5000</option><option>20000</option></select>
+        <span class="pair"><label for="part">部位</label><select id="part" autocomplete="off"><option value="armor" selected>防具</option><option value="weapon">武器</option></select></span>
+        <span class="pair"><label for="start">起點</label><select id="start" autocomplete="off"></select></span>
+        <span class="pair"><label for="target">目標</label><select id="target" autocomplete="off"></select></span>
+        <span class="pair" id="evoWrap"><label for="evo">進化時機</label><select id="evo" autocomplete="off"></select></span>
       </div>
     </div>
     <input type="range" id="slider" autocomplete="off" min="0" max="5000" value="0" aria-label="強化次數">
@@ -90,54 +104,113 @@ td.dropcell{color:var(--drop);font-weight:500}
       <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="0"></span>
       <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
       <span class="hint" id="multHint"></span>
-      <span class="pair"><label for="scale">橫軸</label>
-      <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
+      <span class="pair"><label for="maxN">拉桿上限</label><select id="maxN" autocomplete="off"><option>200</option><option>1000</option><option selected>5000</option><option>20000</option></select></span>
+      <span class="pair"><label for="scale">橫軸</label><select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
     </div>
   </section>
 
   <section class="panel">
-    <div class="hchart" id="chart" role="img" aria-label="各強化等級的機率"></div>
+    <div class="hchart" id="chart" role="img" aria-label="強化 n 次後停在各等級的機率"></div>
   </section>
 
   <section class="panel stats">
     <div class="stat"><div class="k" id="kHit"></div><div class="v" id="sHit"></div></div>
     <div class="stat"><div class="k" id="kNot"></div><div class="v" id="sNot"></div></div>
-    <div class="stat"><div class="k" id="kE"></div><div class="v" id="sE"></div></div>
+    <div class="stat"><div class="k">期望強化次數</div><div class="v" id="sE"></div></div>
     <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
   </section>
 
-  <p class="note" id="note"></p>
+  <section class="panel mats">
+    <h2 id="matsTitle">材料期望值</h2>
+    <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+  </section>
+
+  <p class="note" id="note">對數橫軸以 10⁻⁶ 為下限。橘色為目標，金色為金龍階段。進化發生在到達進化時機的當下，不佔用強化次數。</p>
 
   <section class="panel">
     <details>
-      <summary>強化規則表</summary>
-      <div class="tblwrap"><table id="rules"><thead><tr><th>強化到</th><th>基礎<br>成功率</th><th>目前<br>成功率</th><th>失敗時</th></tr></thead><tbody></tbody></table></div>
+      <summary>強化規則與材料表</summary>
+      <p class="rulesH" id="rulesBoneH"></p>
+      <div class="tblwrap"><table id="rulesBone"><thead></thead><tbody></tbody></table></div>
+      <p class="rulesH" id="rulesGoldH"></p>
+      <div class="tblwrap"><table id="rulesGold"><thead></thead><tbody></tbody></table></div>
+      <p class="rulesH">進化（骨龍 +15～+20 → 金龍 +10）</p>
+      <div class="tblwrap"><table id="rulesEvo"><thead><tr><th>材料</th><th>數量</th></tr></thead><tbody></tbody></table></div>
     </details>
   </section>
 </div>
 
 <script>
-// 強化到 +k 的基礎成功率（k = 1..20）
-const BASE=[null,1,1,1,.82,.69,.56,.44,.32,.20,.08,.07,.06,.05,.05,.05,.05,.05,.05,.05,.05];
-const MULT_MIN=1, MULT_MAX=10;
-// 目前成功率：未滿 100% 的階段乘上倍率，超過 100% 以 100% 計；基礎為 100% 的階段不變
-const rate=(k,m)=> BASE[k]>=1 ? 1 : Math.min(1, BASE[k]*m);
-// 強化到這些等級失敗時：50% 下降一級、50% 不變；其他等級失敗時不變
-const DROP=new Set([12,14,16,18,20]);
-const TOP=20, L=TOP+1, MAXN=20000;
+// ===== 資料：索引 k = 強化到 +k（k = 1..20），每次強化不論成敗都消耗 =====
+const Z=[null];
+const EQ={
+  bone:{ name:"骨龍",
+    // 調整後成功率
+    rate:Z.concat([1,1,1,1,1,.65,.55,.45,.30,.15,.07,.06,.05,.05,.05,.05,.05,.05,.05,.05]),
+    drop:new Set([12,14,16,18,20]),
+    // +1～+15 的金幣、果凍為調整後數值；骨頭碎片、石榴石、淨水與 +16～+20 取自古代龍表格
+    mat:{
+      armor:{
+        "金幣":Z.concat([240,960,2160,3840,6040,8680,11800,15440,19520,24120,29200,34720,40760,47280,54280,154400,174300,195400,200000,200000]),
+        "果凍":Z.concat([0,0,0,0,0,800,1150,1500,1900,2250,2300,2450,2600,2800,3000,17200,19400,21700,24200,26800]),
+        "古代龍的骨頭碎片":Z.concat([5,5,5,5,5,5,5,5,5,10,10,10,10,10,10,10,10,10,10,10]),
+        "高級石榴石":Z.concat([10,30,70,120,190,270,370,480,610,750,910,1080,1270,1470,1690,1920,2170,2430,2710,3000]),
+        "高級生命淨水":Z.concat([10,30,70,130,210,300,400,530,670,830,1000,1190,1390,1620,1860,2110,2380,2670,2980,3300])},
+      weapon:{
+        "金幣":Z.concat([360,1360,3080,5480,8560,12320,16760,21880,27680,34160,41360,49200,57760,66960,76880,200000,200000,200000,200000,200000]),
+        "果凍":Z.concat([0,0,0,0,0,850,1450,2200,3100,4100,4300,4600,4900,5200,5500,50200,60200,71400,84000,98000]),
+        "古代龍的骨頭碎片":Z.concat([10,10,10,10,10,10,10,10,10,20,20,20,20,20,20,20,20,20,20,20]),
+        "高級石榴石":Z.concat([10,40,90,160,250,360,490,640,810,1000,1210,1440,1690,1960,2250,2560,2890,3240,3610,4000]),
+        "高級生命淨水":Z.concat([10,30,70,130,210,300,400,530,670,830,1000,1190,1390,1620,1860,2110,2380,2670,2980,3300])}}},
+  gold:{ name:"金龍",
+    rate:Z.concat([1,1,1,.20,.10,.09,.08,.06,.06,.05,.05,.05,.05,.05,.05,.05,.05,.05,.05,.05]),
+    drop:new Set([15,17,19]),     // 變更後：+7、+9、+11、+13 失敗時維持原等級
+    mat:{
+      armor:{
+        "金幣":Z.concat([15190,20650,27020,34160,42210,51100,55000,65000,75000,85000,100000,112000,128000,132000,135000,138000,141000,144000,147000,150000]),
+        "果凍":Z.concat([0,0,0,4500,6000,7500,10000,12000,14000,16500,18000,20000,21700,24200,25500,26000,26500,27000,27250,27500]),
+        "金龍的鱗片粉末":Z.concat([5,5,5,5,5,0,0,0,0,0,5,5,5,5,5,5,5,5,5,5]),
+        "金龍的逆鱗粉末":Z.concat([5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0]),
+        "金龍的寶玉碎片":Z.concat([0,0,0,0,0,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5])},
+      weapon:{
+        "金幣":Z.concat([10780,14665,19145,29064,41846,57904,68880,90972,105462,117813,125000,130000,135000,140000,140000,145000,147000,148000,149000,150000]),
+        "果凍":Z.concat([0,0,0,7000,10000,14000,18000,26000,33000,42000,50200,60200,71400,84000,90000,92000,94000,96000,98000,100000]),
+        "金龍的鱗片粉末":Z.concat([5,5,5,5,5,0,0,0,0,0,5,5,5,5,5,5,5,5,5,5]),
+        "金龍的逆鱗粉末":Z.concat([5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0]),
+        "金龍的寶玉碎片":Z.concat([0,0,0,0,0,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5])}}}};
+const EVOLVE={"金龍的鱗片粉末":10,"金龍的逆鱗粉末":10,"金龍的寶玉碎片":10,"金幣":100000};
+const MAT_ORDER=["金幣","果凍","古代龍的骨頭碎片","高級石榴石","高級生命淨水","金龍的鱗片粉末","金龍的逆鱗粉末","金龍的寶玉碎片"];
+const TOP=20, MAXN=20000, MULT_MIN=1, MULT_MAX=10, EVO_MIN=15, EVO_TO=10;
 const $=id=>document.getElementById(id);
-let cache={}, cur={start:0,target:TOP,n:0,mult:1};
+const rate=(eq,k,m)=> EQ[eq].rate[k]>=1 ? 1 : Math.min(1,EQ[eq].rate[k]*m);
+// 狀態以字串表示，例如 "bone-12"、"gold-10"
+const key=(eq,lv)=>eq+"-"+lv, parse=s=>{ const [eq,lv]=s.split("-"); return {eq,lv:+lv}; };
+let cache={}, cur={part:"armor",start:"bone-0",target:"gold-20",evo:15,n:0,mult:1};
 
-// 目標等級 T 與 +20 為吸收態
-function matrix(T,m){
-  const P=Array.from({length:L},()=>new Array(L).fill(0));
-  for(let k=0;k<L;k++){
-    if(k===T||k===TOP){ P[k][k]=1; continue; }
-    const s=rate(k+1,m), f=1-s;
-    P[k][k+1]+=s;
-    if(DROP.has(k+1)){ P[k][k-1]+=f/2; P[k][k]+=f/2; } else P[k][k]+=f;
+// ===== 路徑：骨龍 → 骨龍、金龍 → 金龍，或骨龍 → 進化 → 金龍 =====
+function segments(c){
+  const s=parse(c.start), t=parse(c.target);
+  if(s.eq===t.eq) return [{eq:s.eq,from:s.lv,to:t.lv,evolveAfter:false}];
+  return [{eq:"bone",from:s.lv,to:c.evo,evolveAfter:true},{eq:"gold",from:EVO_TO,to:t.lv,evolveAfter:false}];
+}
+// 某段可能降到的最低等級：起點的下一階若會降級，最低降到起點 −1
+const floorOf=(eq,from)=> EQ[eq].drop.has(from+1) ? from-1 : from;
+
+// 轉移：成功升一級（到達該段終點時，若需進化則立即變成金龍 +10）；失敗依規則降一級或不變
+function buildChain(c,m){
+  const segs=segments(c), tKey=c.target, states=[], idx={};
+  for(const sg of segs) for(let k=floorOf(sg.eq,sg.from);k<sg.to;k++){ const s=key(sg.eq,k); if(!(s in idx)){ idx[s]=states.length; states.push(s); } }
+  idx[tKey]=states.length; states.push(tKey);
+  const T=[];   // T[i] = [[j,p],...]
+  for(const sg of segs) for(let k=floorOf(sg.eq,sg.from);k<sg.to;k++){
+    const i=idx[key(sg.eq,k)], p=rate(sg.eq,k+1,c.mult??m), f=1-p, out=[];
+    const up = (k+1===sg.to) ? (sg.evolveAfter ? key("gold",EVO_TO) : tKey) : key(sg.eq,k+1);
+    out.push([idx[up===tKey?tKey:up],p]);
+    if(EQ[sg.eq].drop.has(k+1)){ out.push([idx[key(sg.eq,k-1)],f/2]); out.push([i,f/2]); } else out.push([i,f]);
+    T[i]=out.filter(([,q])=>q>0);
   }
-  return P;
+  T[idx[tKey]]=[[idx[tKey],1]];
+  return {states,idx,T,segs};
 }
 
 // 解線性方程組（高斯消去，部分選主元）
@@ -151,80 +224,120 @@ function solve(A,b){
   return M.map((r,i)=>r[n]/r[i]);
 }
 
-// 從 start 出發：最終到達 T 的機率 h；若必定到達，另算期望次數 e
-function analytic(start,T,m){
-  if(start===T) return {h:1,e:0};
-  const P=matrix(T,m), tr=[...Array(L).keys()].filter(i=>i!==T&&i!==TOP);
-  const A=tr.map(i=>tr.map(j=>(i===j?1:0)-P[i][j]));
-  const h=solve(A,tr.map(i=>P[i][T]))[tr.indexOf(start)];
-  if(Math.abs(h-1)>1e-9) return {h,e:null};
-  return {h:1,e:solve(A,tr.map(()=>1))[tr.indexOf(start)]};
-}
-
-// 預先算好 0..MAXN 次後的分布（同一組起點與目標只算一次）
-function table(start,T,m){
-  const key=start+"-"+T+"-"+m; if(cache[key]) return cache[key];
-  const P=matrix(T,m), out=new Float64Array((MAXN+1)*L);
-  let v=new Float64Array(L); v[start]=1;
+function table(c){
+  const ck=[c.part,c.start,c.target,c.evo,c.mult].join("|"); if(cache[ck]) return cache[ck];
+  const {states,idx,T,segs}=buildChain(c,c.mult), S=states.length, g=idx[c.target], s0=idx[c.start] ?? idx[key("gold",EVO_TO)];
+  // 逐次推算 0..MAXN 次後的分布
+  const out=new Float64Array((MAXN+1)*S); let v=new Float64Array(S); v[s0]=1;
+  let med=null;
   for(let n=0;n<=MAXN;n++){
-    out.set(v,n*L);
-    const w=new Float64Array(L);
-    for(let i=0;i<L;i++){ const x=v[i]; if(!x) continue; const r=P[i]; for(let j=Math.max(0,i-1);j<=Math.min(TOP,i+1);j++) w[j]+=x*r[j]; }
+    out.set(v,n*S);
+    if(med===null && v[g]>0.5) med=n;
+    const w=new Float64Array(S);
+    for(let i=0;i<S;i++){ const x=v[i]; if(!x) continue; for(const [j,p] of T[i]) w[j]+=x*p; }
     v=w;
   }
-  let med=null; for(let n=0;n<=MAXN;n++){ if(out[n*L+T]>0.5){med=n;break;} }
-  return cache[key]={out,med,...analytic(start,T,m)};
-}
-
-// 建立選單、圖表列與規則表
-for(let k=0;k<TOP;k++) $("start").add(new Option("+"+k,k));
-for(let k=0;k<=TOP;k++) $("target").add(new Option("+"+k,k));
-const chart=$("chart"), rows=[];
-for(let k=0;k<L;k++){
-  const r=document.createElement("div"); r.className="hrow";
-  r.innerHTML='<div class="hl">+'+k+'</div><div class="track"><div class="bar"></div></div><div class="val"></div>';
-  chart.appendChild(r); rows.push(r);
-}
-const tb=$("rules").tBodies[0];
-const fmtRate=x=>+(x*100).toFixed(2)+"%";
-function renderRules(){
-  tb.innerHTML="";
-  for(let k=1;k<=TOP;k++){
-    const tr=tb.insertRow(), r=rate(k,cur.mult);
-    tr.insertCell().textContent="+"+(k-1)+" → +"+k;
-    tr.insertCell().textContent=fmtRate(BASE[k]);
-    const cr=tr.insertCell(); cr.textContent=fmtRate(r);
-    if(Math.abs(r-BASE[k])>1e-12) cr.className="up";
-    const c=tr.insertCell();
-    if(r>=1){ c.textContent="—"; }
-    else if(DROP.has(k)){ c.innerHTML="50% 降一級<br>50% 不變"; c.className="dropcell"; }
-    else c.textContent="不變";
+  // 各等級的期望嘗試次數：解 (I−Q)ᵀ x = e_start
+  const tr=states.map((_,i)=>i).filter(i=>i!==g), n=tr.length;
+  let visits=new Array(S).fill(0), E=0;
+  if(n>0 && s0!==g){
+    const pos=new Map(tr.map((i,a)=>[i,a])), A=Array.from({length:n},()=>new Array(n).fill(0));
+    for(const i of tr){ const a=pos.get(i); A[a][a]+=1; for(const [j,p] of T[i]) if(j!==g) A[pos.get(j)][a]-=p; }
+    const x=solve(A,tr.map(i=>i===s0?1:0));
+    tr.forEach((i,a)=>{ visits[i]=x[a]; E+=x[a]; });
   }
+  // 材料期望值：骨龍強化、進化、金龍強化分開列
+  const mats={bone:{},evo:{},gold:{}};
+  states.forEach((s,i)=>{ if(i===g||!visits[i]) return; const {eq,lv}=parse(s);
+    for(const [m,arr] of Object.entries(EQ[eq].mat[c.part])) if(arr[lv+1]) mats[eq][m]=(mats[eq][m]||0)+visits[i]*arr[lv+1]; });
+  if(segs.length===2) for(const [m,q] of Object.entries(EVOLVE)) mats.evo[m]=q;
+  return cache[ck]={states,out,S,g,med,E,mats,evolves:segs.length===2};
 }
 
+// ===== 選單 =====
+const lab=s=>{ const {eq,lv}=parse(s); return EQ[eq].name+" +"+lv; };
+function fillSelect(sel,groups){
+  sel.innerHTML="";
+  for(const [glab,opts] of groups){ const og=document.createElement("optgroup"); og.label=glab;
+    for(const [v,t,dis] of opts){ const o=new Option(t,v); o.disabled=!!dis; og.appendChild(o); } sel.appendChild(og); }
+}
+fillSelect($("start"),[["骨龍",Array.from({length:TOP},(_,k)=>[key("bone",k),"骨龍 +"+k])],["金龍",Array.from({length:TOP},(_,k)=>[key("gold",k),"金龍 +"+k])]]);
+// 目標：骨龍只能到骨龍或進化成金龍（金龍 +10 以上）；金龍只能到更高的金龍
+function targetAllowed(t,s){
+  const S=parse(s), T=parse(t);
+  if(S.eq==="bone") return T.eq==="bone" ? T.lv>S.lv : T.lv>=EVO_TO;
+  return T.eq==="gold" && T.lv>S.lv;
+}
+function refreshTargets(){
+  fillSelect($("target"),[["骨龍",Array.from({length:TOP},(_,k)=>[key("bone",k+1),"骨龍 +"+(k+1),!targetAllowed(key("bone",k+1),cur.start)])],
+                          ["金龍",Array.from({length:TOP},(_,k)=>[key("gold",k+1),"金龍 +"+(k+1),!targetAllowed(key("gold",k+1),cur.start)])]]);
+  if(!targetAllowed(cur.target,cur.start)){
+    const S=parse(cur.start);
+    cur.target = S.eq==="bone" ? key("bone",Math.min(TOP,S.lv+1)) : key("gold",Math.min(TOP,S.lv+1));
+  }
+  $("target").value=cur.target;
+  // 進化時機：只在骨龍 → 金龍時顯示，選項不低於起點
+  const S=parse(cur.start), Tg=parse(cur.target), need=S.eq==="bone"&&Tg.eq==="gold";
+  $("evoWrap").hidden=!need;
+  const lo=Math.max(EVO_MIN,S.lv);
+  fillSelect($("evo"),[["骨龍",Array.from({length:TOP-EVO_MIN+1},(_,i)=>[String(EVO_MIN+i),"骨龍 +"+(EVO_MIN+i)+" 時進化",EVO_MIN+i<lo])]]);
+  if(cur.evo<lo) cur.evo=lo;
+  $("evo").value=String(cur.evo);
+}
+
+// ===== 圖表 =====
 const pct=x=>(x*100).toFixed(4)+"%";
+const fmt=x=> x>=1000 ? Math.round(x).toLocaleString("en-US") : (Math.round(x*10)/10).toLocaleString("en-US");
 function render(){
-  const T=cur.target, t=table(cur.start,T,cur.mult), n=cur.n, log=$("scale").value==="log";
-  for(let k=0;k<L;k++){
-    const p=t.out[n*L+k];
-    const w = log ? (p<=1e-6?0:(Math.log10(p)+6)/6) : p;
-    rows[k].classList.toggle("goal",k===T);
-    rows[k].querySelector(".bar").style.width=(Math.max(0,Math.min(1,w))*100)+"%";
-    rows[k].querySelector(".val").textContent=pct(p);
-    rows[k].title="+"+k+"："+pct(p);
-  }
-  const hit=t.out[n*L+T];
+  const t=table(cur), n=cur.n, log=$("scale").value==="log", ch=$("chart");
+  ch.innerHTML="";
+  let lastEq=null;
+  t.states.forEach((s,i)=>{
+    const {eq,lv}=parse(s);
+    if(lastEq!==null && eq!==lastEq){ const d=document.createElement("div"); d.className="sepl"; d.textContent="↓ 進化（骨龍 +"+cur.evo+" → 金龍 +"+EVO_TO+"）"; ch.appendChild(d); }
+    lastEq=eq;
+    const p=t.out[n*t.S+i], w=log?(p<=1e-6?0:(Math.log10(p)+6)/6):p;
+    const r=document.createElement("div"); r.className="hrow"+(eq==="gold"?" gold":"")+(i===t.g?" goal":"");
+    r.innerHTML='<div class="hl"><span class="eq">'+EQ[eq].name+'</span>+'+lv+'</div><div class="track"><div class="bar" style="width:'+(Math.max(0,Math.min(1,w))*100)+'%"></div></div><div class="val">'+pct(p)+'</div>';
+    r.title=lab(s)+"："+pct(p); ch.appendChild(r);
+  });
+  const hit=t.out[n*t.S+t.g];
   $("nShow").textContent=n;
-  $("kHit").textContent="已到達 +"+T+"（n 次內）"; $("sHit").textContent=pct(hit);
-  $("kNot").textContent="尚未到達 +"+T;          $("sNot").textContent=pct(1-hit);
-  if(t.e!==null){ $("kE").textContent="期望總次數（自起點）"; $("sE").textContent=t.e.toFixed(3); }
-  else { $("kE").textContent="最終能到達 +"+T+" 的機率"; $("sE").textContent=pct(t.h); }
-  $("sMed").textContent = t.med!==null ? t.med : (t.h<=0.5 ? "不會超過 50%" : "> "+MAXN);
-  $("note").textContent = (T<cur.start
-      ? "目標低於起始等級：代表「掉到 +"+T+"」的機率。若途中先到達 +20 就會停止，因此最終機率可能小於 100%。"
-      : T===cur.start ? "目標等於起始等級：第 0 次就已達成。" : "")
-    + " 對數橫軸以 10⁻⁶ 為下限。橘色為目標等級。";
+  $("kHit").textContent="已到達 "+lab(cur.target)+"（n 次內）"; $("sHit").textContent=pct(hit);
+  $("kNot").textContent="尚未到達 "+lab(cur.target); $("sNot").textContent=pct(1-hit);
+  $("sE").textContent=t.E.toFixed(3);
+  $("sMed").textContent=t.med!==null?t.med:"> "+MAXN;
+  // 材料表
+  $("matsTitle").textContent="材料期望值（"+($("part").value==="armor"?"防具":"武器")+"）";
+  const cols=[["骨龍強化","bone"],["進化","evo"],["金龍強化","gold"]].filter(([,k])=>Object.keys(t.mats[k]).length || (k==="evo"&&t.evolves));
+  const used=MAT_ORDER.filter(m=>cols.some(([,k])=>t.mats[k][m]));
+  const tbl=$("mats");
+  tbl.tHead.innerHTML="<tr><th>材料</th>"+(cols.length>1?"<th>合計</th>":"")+cols.map(([h])=>"<th>"+h+"</th>").join("")+"</tr>";
+  tbl.tBodies[0].innerHTML=used.map(m=>{
+    const vals=cols.map(([,k])=>t.mats[k][m]||0), sum=vals.reduce((a,b)=>a+b,0);
+    return "<tr><td>"+m+"</td>"+(cols.length>1?'<td class="sum">'+fmt(sum)+"</td>":"")+vals.map(v=>"<td>"+(v?fmt(v):"—")+"</td>").join("")+"</tr>";
+  }).join("");
 }
+
+// ===== 規則表 =====
+function renderRules(){
+  const part=cur.part, pn=part==="armor"?"防具":"武器";
+  for(const eq of ["bone","gold"]){
+    const T=$(eq==="bone"?"rulesBone":"rulesGold"), mats=Object.keys(EQ[eq].mat[part]);
+    $(eq==="bone"?"rulesBoneH":"rulesGoldH").textContent=EQ[eq].name+"（"+pn+"）";
+    T.tHead.innerHTML="<tr><th>強化到</th><th>基礎<br>成功率</th><th>目前<br>成功率</th><th>失敗時</th>"+mats.map(m=>"<th>"+m+"</th>").join("")+"</tr>";
+    let h="";
+    for(let k=1;k<=TOP;k++){
+      const b=EQ[eq].rate[k], r=rate(eq,k,cur.mult);
+      const fail = r>=1 ? "—" : EQ[eq].drop.has(k) ? '<span style="color:var(--drop)">50% 降一級</span>' : "不變";
+      h+="<tr><td>+"+k+"</td><td>"+(+(b*100).toFixed(2))+"%</td><td"+(Math.abs(r-b)>1e-12?' class="up"':'')+">"+(+(r*100).toFixed(2))+"%</td><td>"+fail+"</td>"+mats.map(m=>"<td>"+EQ[eq].mat[part][m][k].toLocaleString("en-US")+"</td>").join("")+"</tr>";
+    }
+    T.tBodies[0].innerHTML=h;
+  }
+  $("rulesEvo").tBodies[0].innerHTML=Object.entries(EVOLVE).map(([m,q])=>"<tr><td>"+m+"</td><td>"+q.toLocaleString("en-US")+"</td></tr>").join("");
+}
+
+// ===== 控制 =====
 function setN(n){
   n=Math.max(0,Math.min(MAXN,Math.round(+n||0))); cur.n=n;
   if(n>+$("slider").max){ const m=[200,1000,5000,20000].find(o=>o>=n); $("maxN").value=m; $("slider").max=m; }
@@ -233,30 +346,28 @@ function setN(n){
 $("slider").addEventListener("input",e=>setN(e.target.value));
 $("nInput").addEventListener("input",e=>setN(e.target.value));
 $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
-$("start").addEventListener("change",e=>{cur.start=+e.target.value; render();});
-$("target").addEventListener("change",e=>{cur.target=+e.target.value; render();});
+$("part").addEventListener("change",e=>{cur.part=e.target.value; renderRules(); render();});
+$("start").addEventListener("change",e=>{cur.start=e.target.value; refreshTargets(); render();});
+$("target").addEventListener("change",e=>{ if(targetAllowed(e.target.value,cur.start)) cur.target=e.target.value; refreshTargets(); render();});
+$("evo").addEventListener("change",e=>{cur.evo=Math.max(+e.target.value,Math.max(EVO_MIN,parse(cur.start).lv)); refreshTargets(); render();});
 $("scale").addEventListener("change",render);
-// 倍率：輸入有效時立即套用；無效時保留上一個有效倍率並提示
+$("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
 function multHint(){
-  const h=$("multHint");
-  h.className="hint"; h.textContent = cur.mult===1 ? "（1 = 無活動）" : "目前 ×"+cur.mult+"，5% → "+fmtRate(rate(20,cur.mult));
+  const h=$("multHint"); h.className="hint";
+  h.textContent = cur.mult===1 ? "（1 = 無活動）" : "目前 ×"+cur.mult+"，5% → "+(+(Math.min(1,0.05*cur.mult)*100).toFixed(2))+"%";
 }
 $("mult").addEventListener("input",e=>{
   const v=parseFloat(e.target.value);
-  if(!(v>=MULT_MIN && v<=MULT_MAX)){
-    const h=$("multHint"); h.className="hint bad"; h.textContent="請輸入 "+MULT_MIN+"～"+MULT_MAX+" 之間的數字，目前仍以 ×"+cur.mult+" 計算"; return;
-  }
+  if(!(v>=MULT_MIN && v<=MULT_MAX)){ const h=$("multHint"); h.className="hint bad"; h.textContent="請輸入 "+MULT_MIN+"～"+MULT_MAX+" 之間的數字，目前仍以 ×"+cur.mult+" 計算"; return; }
   const m=Math.round(v*10000)/10000;
   if(m!==cur.mult){ cur.mult=m; cache={}; renderRules(); render(); }
   multHint();
 });
 $("mult").addEventListener("change",()=>{ $("mult").value=cur.mult; multHint(); });
-$("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
 
 // 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
-  $("start").value=String(cur.start);
-  $("target").value=String(cur.target);
+  $("part").value=cur.part; $("start").value=cur.start; refreshTargets();
   $("mult").value=cur.mult; renderRules(); multHint();
   $("slider").max=$("maxN").value;
   setN(cur.n);
