@@ -71,7 +71,7 @@ tfoot td{font-weight:600}
 <div class="wrap">
   <header>
     <h1>露比那特飾品材料模擬</h1>
-    <p class="sub">白龍飾品 +15～+20 進化為露比那特飾品 +0～+5，進化需要 250 個暗黑核心；露比那特飾品每次強化成功率 30%，失敗不降級，核心照樣消耗。遇到機率活動時，可調整成功率倍率：強化成功率乘上倍率，超過 100% 時以 100% 計，進化不受影響。可設定要處理的飾品數量（1～4 個）：飾品一個接一個進化並強化，暗黑核心共用，前一個剩下的核心留給下一個。拖動拉桿，查看開了 n 個暗黑核心箱子後，停在各階段的機率（多個飾品時為各階段的飾品數期望值）。</p>
+    <p class="sub">白龍飾品 +15～+20 進化為露比那特飾品 +0～+5，進化需要 250 個暗黑核心；露比那特飾品每次強化成功率 30%，失敗不降級，核心照樣消耗。遇到機率活動時，可調整成功率倍率（1～10）：強化成功率乘上倍率，超過 100% 時以 100% 計，進化不受影響。可設定要處理的飾品數量（1～4 個）：飾品一個接一個進化並強化，暗黑核心共用，前一個剩下的核心留給下一個。拖動拉桿，查看開了 n 個暗黑核心箱子後，停在各階段的機率（多個飾品時為各階段的飾品數期望值）。</p>
   </header>
 
   <section class="panel controls">
@@ -87,7 +87,7 @@ tfoot td{font-weight:600}
     <div class="row">
       <button id="dec">−1</button><button id="inc">+1</button>
       <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="5000" value="0"></span>
-      <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="0.1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
+      <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
       <span class="hint" id="multHint"></span>
       <span class="pair"><label for="maxN">拉桿上限</label>
       <select id="maxN" autocomplete="off"><option>200</option><option>500</option><option selected>1000</option><option>2000</option><option>5000</option></select></span>
@@ -127,7 +127,7 @@ tfoot td{font-weight:600}
 // 露比那特 +k → +(k+1) 每次消耗的暗黑核心（k = 0..7）
 const COST=[60,80,110,150,200,215,230,245];
 const EVO=250, BASE_PS=0.3, TOP=8, MAXN=5000, KMAX=4;
-const MULT_MIN=0.1, MULT_MAX=10;
+const MULT_MIN=1, MULT_MAX=10;
 // 強化成功率：基礎 30% 乘上倍率，超過 100% 以 100% 計
 const rateOf=m=>Math.min(1,BASE_PS*m);
 // 暗黑核心箱子：[核心數, 機率%]；冰凝槌子三項合計 3.75%，核心數 0
