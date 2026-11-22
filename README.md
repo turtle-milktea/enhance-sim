@@ -8,5 +8,6 @@
 | 凍龍托利斯曼強化規則 | `/frozen-dragon/` |
 | 骨龍裝強化 | `/bone-dragon/` |
 | 露比那特飾品材料 | `/rubinat/` |
+| 骨龍・金龍特殊屬性重置 | `/special/` |
 
 線上版本：https://turtle-milktea.github.io/enhance-sim/
