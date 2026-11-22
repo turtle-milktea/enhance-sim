@@ -88,6 +88,8 @@ tr.cared td{color:var(--goal);font-weight:500}
       <li>每條從「項目 × 階級」的所有組合中抽一個，機率 = 項目機率 × 階級機率。</li>
       <li>每次重置（隨機）都會重新抽出全部條數。消耗：骨龍防具為時間之沙 × 1 + 1,000 金幣，骨龍武器為時間之沙 × 1 + 2,000 金幣（時間之沙可用方舟的時間之沙代替）；金龍防具、武器皆為金龍的寶玉碎片 × 3 + 1,000 金幣。</li>
       <li>防具：選 1～3 項技能，可設定每項至少多少、所選技能總和至少多少，所有條件要同時達成。武器：設定古代技能總和至少多少。</li>
+      <li>「選擇」：重抽全部條數後，可在新舊兩組結果中二選一。單獨使用時，達成機率和「隨機」相同，只是多消耗機械零件。</li>
+      <li>「隨機＋鎖定」：先用隨機重置；抽到有用的條時，鎖住數值最高的那條（骨龍最多 1 條、金龍最多 2 條），但只在鎖住後目標仍可能達成時才鎖；鎖住後不解鎖，之後每次重置依鎖定條數付費。</li>
       <li>拖動拉桿，查看重置 n 次內至少達成一次目標的機率。</li>
     </ol>
     <p class="meta">製作日期：2026-11-22</p>
@@ -117,7 +119,10 @@ tr.cared td{color:var(--goal);font-weight:500}
   </section>
 
   <section class="panel controls">
-    <div><label>重置次數 n</label><div class="n-big"><span id="nShow">0</span><span class="n-unit">次</span></div></div>
+    <div class="row" style="justify-content:space-between">
+      <div><label>重置次數 n</label><div class="n-big"><span id="nShow">0</span><span class="n-unit">次</span></div></div>
+      <span class="pair"><label for="strat">策略</label><select id="strat" autocomplete="off"><option value="random" selected>只用隨機</option><option value="choose">只用選擇</option><option value="lock">隨機＋鎖定</option></select></span>
+    </div>
     <input type="range" id="slider" autocomplete="off" min="0" max="1000" value="0" aria-label="重置次數">
     <div class="row">
       <button id="dec">−1</button><button id="inc">+1</button>
@@ -127,7 +132,7 @@ tr.cared td{color:var(--goal);font-weight:500}
   </section>
 
   <section class="panel stats">
-    <div class="stat"><div class="k">單次重置達成目標</div><div class="v" id="sP"></div></div>
+    <div class="stat"><div class="k">單次全部重抽達成目標</div><div class="v" id="sP"></div></div>
     <div class="stat"><div class="k" id="kN"></div><div class="v" id="sN"></div></div>
     <div class="stat"><div class="k">期望重置次數</div><div class="v" id="sE"></div></div>
     <div class="stat"><div class="k">50% 機率達成所需次數</div><div class="v" id="sQ50"></div></div>
@@ -136,18 +141,26 @@ tr.cared td{color:var(--goal);font-weight:500}
   </section>
 
   <section class="panel">
-    <h2>材料期望值</h2>
+    <h2 id="matsTitle">材料期望值</h2>
     <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody></table></div>
     <p class="note" style="margin-top:8px;font-size:.8rem">「到第 n 次為止」：重置 n 次時平均已消耗的材料（達成目標後就停止重置，n 夠大時會等於「達成目標」）。「達成目標」：從開始到第一次達成目標的期望值。</p>
   </section>
 
   <section class="panel">
+    <h2>策略比較（期望值）</h2>
+    <div class="tblwrap" style="margin-top:0"><table id="cmp"><thead></thead><tbody></tbody></table></div>
+    <p class="note" style="margin-top:8px;font-size:.8rem" id="cmpNote"></p>
+  </section>
+
+  <section class="panel">
     <details>
-      <summary>屬性表</summary>
+      <summary>屬性表與重置費用</summary>
       <p class="rulesH" id="tblArmorH">防具</p>
       <div class="tblwrap"><table id="tblArmor"></table></div>
       <p class="rulesH">武器</p>
       <div class="tblwrap"><table id="tblWeapon"></table></div>
+      <p class="rulesH">重置費用（每次）</p>
+      <div class="tblwrap"><table id="tblCost"></table></div>
       <p class="note" style="margin-top:8px;font-size:.8rem">階級機率：1 級 23%、2 級 22%、3 級 20%、4 級 18%、5 級 17%。上排為骨龍與金龍共有的 3 條；第四條只有金龍。標示顏色的是本模擬器計算的技能項目。</p>
     </details>
   </section>
@@ -166,13 +179,18 @@ const VALS={
     "職業精通III":[[40,80,120,160,200],[20,40,60,80,100]],"終極技能":[[40,80,120,160,200],[20,40,60,80,100]],"2轉50技能":[[40,80,120,160,200],[20,40,60,80,100]],"主力技能":[[40,80,120,160,200],[20,40,60,80,100]],"輔助技能":[[40,80,120,160,200],[20,40,60,80,100]]},
   weapon:{"雙攻":[["3%","4%","5%","6%","8%"],["3%","4%","5%","6%","8%"]],"屬攻":[["3%","4%","5%","6%","8%"],["3%","4%","5%","6%","8%"]],"暴擊":[[50000,60000,70000,80000,100000],[50000,60000,70000,80000,100000]],"暴傷":[[225000,270000,315000,360000,450000],[225000,270000,315000,360000,450000]],
     "夢幻":[[100,150,200,250,300],[50,75,100,125,150]],"赤月":[[100,150,200,250,300],[50,75,100,125,150]],"蒼翠":[[100,150,200,250,300],[50,75,100,125,150]],"古代":[[100,150,200,250,300],[50,75,100,125,150]]}};
-// 每次「隨機」重置的消耗（依裝備與部位）；時間之沙可用方舟的時間之沙代替
+// 每次重置的消耗（依裝備、部位與方式）；時間之沙可用方舟的時間之沙代替，燈盞可用無法交易的燈盞代替
+const SAND="時間之沙", JADE="金龍的寶玉碎片", PART_="帕其哈的機械零件", LAMP="蘊含骨龍氣息的燈盞", GOLDC="金幣";
 const COSTS={
-  bone:{armor:{"時間之沙":1,"金幣":1000}, weapon:{"時間之沙":1,"金幣":2000}},
-  gold:{armor:{"金龍的寶玉碎片":3,"金幣":1000}, weapon:{"金龍的寶玉碎片":3,"金幣":1000}}};
+  bone:{armor:{random:{[SAND]:1,[GOLDC]:1000}, choose:{[SAND]:1,[PART_]:15,[GOLDC]:1000}, lock1:{[LAMP]:1,[SAND]:10,[PART_]:25,[GOLDC]:10000}},
+        weapon:{random:{[SAND]:1,[GOLDC]:2000}, choose:{[SAND]:1,[PART_]:25,[GOLDC]:2000}, lock1:{[SAND]:10,[PART_]:300,[GOLDC]:10000}}},
+  gold:{armor:{random:{[JADE]:3,[GOLDC]:1000}, choose:{[JADE]:3,[PART_]:15,[GOLDC]:1000}, lock1:{[JADE]:5,[PART_]:30,[GOLDC]:10000}, lock2:{[JADE]:10,[PART_]:50,[GOLDC]:20000}},
+        weapon:{random:{[JADE]:3,[GOLDC]:1000}, choose:{[JADE]:3,[PART_]:25,[GOLDC]:1000}, lock1:{[JADE]:5,[PART_]:50,[GOLDC]:10000}, lock2:{[JADE]:10,[PART_]:100,[GOLDC]:20000}}}};
+const MAT_ORDER=[JADE,SAND,LAMP,PART_,GOLDC];
+const NL=5000;   // 鎖定策略逐次推算的上限
 const NMAX=10000000;
 const $=id=>document.getElementById(id);
-let cur={equip:"bone",part:"armor",sk:["主力技能",null,null],min:[200,null,null],tot:null,wmin:400,n:0};
+let cur={equip:"bone",part:"armor",sk:["主力技能",null,null],min:[200,null,null],tot:null,wmin:400,n:0,strat:"random"};
 
 // ===== 計算：列舉所有條的組合（每條 = 沒抽到關心的技能，或 某項技能 × 某階級）=====
 // 回傳單次重置的 {總和: 機率} 分布，以及達成目標的機率
@@ -197,6 +215,86 @@ function compute(c){
     for(const [i,v,pr] of L[li]){ if(i>=0) s[i]+=v; rec(li+1,q*pr); if(i>=0) s[i]-=v; }
   })(0,1);
   return {dist:[...dist.entries()].sort((a,b)=>a[0]-b[0]),p,k,lines,tot,mins};
+}
+
+// ===== 隨機＋鎖定：狀態 = 已鎖住的條（上排或第四條、哪項技能、數值）=====
+function goalOf(c){
+  if(c.part==="armor"){ const cared=c.sk.filter(Boolean), mins=c.sk.map((x,i)=>x?c.min[i]:undefined).filter(x=>x!==undefined);
+    return {cared,mins,tot:c.tot,useful:mins.map(m=>m!=null||c.tot!=null)}; }
+  return {cared:["古代"],mins:[c.wmin],tot:null,useful:[true]};
+}
+let lockCache={};
+function lockChain(c){
+  const ck=[c.equip,c.part,c.sk.join("/"),c.min.join("/"),c.tot,c.wmin].join("|"); if(lockCache[ck]) return lockCache[ck];
+  const g=goalOf(c), k=g.cared.length, gold=c.equip==="gold", maxLock=gold?2:1, nF0=gold?1:0;
+  const cap=[VALS[c.part][g.cared[0]][0][4], VALS[c.part][g.cared[0]][1][4]];   // 上排、第四條的最高數值
+  const ok=s=>{ const sum=s.reduce((a,b)=>a+b,0); return g.mins.every((m,i)=>m==null||s[i]>=m) && (g.tot==null||sum>=g.tot); };
+  // 剩下的未鎖條（上排 nT 條、第四條 nF 條）全部抽到最高值時，能不能達成目標
+  function feasible(s,nT,nF){
+    const slots=Array(nT).fill(0).concat(Array(nF).fill(1)), t=s.slice();
+    return (function rec(j){ if(j===slots.length) return ok(t);
+      for(let i=0;i<k;i++){ t[i]+=cap[slots[j]]; const r=rec(j+1); t[i]-=cap[slots[j]]; if(r) return true; } return false; })(0);
+  }
+  const lineOut=f=>{ const out=[[-1,0,1-0.1*k]]; g.cared.forEach((sk,i)=>TIER.forEach((t,j)=>out.push([i,VALS[c.part][sk][f][j],0.1*t]))); return out; };
+  const OUT=[lineOut(0),lineOut(1)];
+  const keyOf=L=>L.map(x=>x.f+":"+x.i+":"+x.v).sort().join(",");
+  const zero=new Array(k).fill(0);
+  if(!feasible(zero,3,nF0)) return lockCache[ck]={feasible:false};
+  // 由空狀態出發，找出所有會到達的狀態與轉移
+  const states=[], idx=new Map(), trans=[];
+  const add=L=>{ const key=keyOf(L); if(!idx.has(key)){ idx.set(key,states.length); states.push(L); } return idx.get(key); };
+  add([]);
+  for(let si=0;si<states.length;si++){
+    const L=states[si], base=zero.slice(); L.forEach(x=>base[x.i]+=x.v);
+    const nT=3-L.filter(x=>x.f===0).length, nF=nF0-L.filter(x=>x.f===1).length;
+    const slots=Array(nT).fill(0).concat(Array(nF).fill(1));
+    const tr=new Map(); let done=0; const pick=[];
+    (function rec(j,q){
+      if(j===slots.length){
+        const s=base.slice(); pick.forEach(o=>{ if(o.i>=0) s[o.i]+=o.v; });
+        if(ok(s)){ done+=q; return; }
+        let NL2=L;
+        if(L.length<maxLock){
+          const cands=pick.filter(o=>o.i>=0&&g.useful[o.i]).sort((a,b)=>b.v-a.v||a.f-b.f||a.i-b.i);
+          let cur2=base.slice(), rT=nT, rF=nF, added=[];
+          for(const o of cands){
+            if(L.length+added.length>=maxLock) break;
+            const t=cur2.slice(); t[o.i]+=o.v; const t2=rT-(o.f===0?1:0), f2=rF-(o.f===1?1:0);
+            if(feasible(t,t2,f2)){ cur2=t; rT=t2; rF=f2; added.push({f:o.f,i:o.i,v:o.v}); }
+          }
+          if(added.length) NL2=L.concat(added);
+        }
+        const to=add(NL2); tr.set(to,(tr.get(to)||0)+q); return;
+      }
+      for(const [i,v,p] of OUT[slots[j]]){ pick.push({f:slots[j],i,v}); rec(j+1,q*p); pick.pop(); }
+    })(0,1);
+    trans[si]={tr,done};
+  }
+  const S=states.length, typeOf=si=>states[si].length;   // 0 = 隨機，1 = 鎖 1 條，2 = 鎖 2 條
+  // 期望次數：鎖定條數只增不減，依鎖定條數由多到少計算
+  const order=[...states.keys()].sort((a,b)=>typeOf(b)-typeOf(a));
+  const cnt=Array.from({length:S},()=>[0,0,0]);
+  for(const si of order){
+    const {tr}=trans[si], self=tr.get(si)||0, d=1-self, v=[0,0,0];
+    v[typeOf(si)]+=1/d;
+    for(const [to,q] of tr) if(to!==si) for(let t=0;t<3;t++) v[t]+=q/d*cnt[to][t];
+    cnt[si]=v;
+  }
+  const E3=cnt[0], E=E3[0]+E3[1]+E3[2];
+  // 逐次推算 NL 次：達成機率與到第 n 次為止的消耗（依重置方式分開累計）
+  const doneAt=new Float64Array(NL+1), cumT=new Float64Array((NL+1)*3);
+  let v=new Float64Array(S), dn=0; v[0]=1; let q50=null,q90=null,q99=null, last=NL;
+  const run=[0,0,0];
+  for(let n=0;n<=NL;n++){
+    doneAt[n]=dn; for(let t=0;t<3;t++) cumT[n*3+t]=run[t];
+    if(q50===null&&dn>=.5) q50=n; if(q90===null&&dn>=.9) q90=n; if(q99===null&&dn>=.99) q99=n;
+    if(1-dn<1e-12){ last=n; for(let m=n+1;m<=NL;m++){ doneAt[m]=dn; for(let t=0;t<3;t++) cumT[m*3+t]=run[t]; } break; }
+    if(n===NL) break;
+    const w=new Float64Array(S);
+    for(let si=0;si<S;si++){ const x=v[si]; if(!x) continue; run[typeOf(si)]+=x; dn+=x*trans[si].done; for(const [to,q] of trans[si].tr) w[to]+=x*q; }
+    v=w;
+  }
+  return lockCache[ck]={feasible:true,E3,E,doneAt,cumT,q50,q90,q99,converged:1-doneAt[NL]<1e-12,states:S};
 }
 
 // ===== 畫面 =====
@@ -244,25 +342,75 @@ function render(){
     row.innerHTML='<div class="hl">'+v+'</div><div class="track"><div class="bar" style="width:'+(q/maxP*100)+'%"></div></div><div class="val">'+pct(q)+'</div><div class="val ge">'+pct(ge)+'</div>';
     ch.appendChild(row); ge-=q;
   }
-  // 統計
-  const noGoal = armor && cond.length===0;
-  const pn = noGoal?0: 1-Math.pow(1-p,n);
+  // 統計（依所選策略）
+  const noGoal = armor && cond.length===0, st=cur.strat, C=COSTS[cur.equip][cur.part];
+  const lk = (!noGoal && st==="lock") ? lockChain(cur) : null;
+  const impossible = !noGoal && (p===0 || (lk && !lk.feasible));
   $("nShow").textContent=n.toLocaleString("en-US");
   $("sP").textContent = noGoal ? "—" : pct(p); $("sP").className="v"+(!noGoal&&p===0?" bad":"");
-  $("kN").textContent=n.toLocaleString("en-US")+" 次內至少達成一次"; $("sN").textContent=noGoal?"—":pct(pn);
-  if(noGoal || p===0){
+  $("kN").textContent=n.toLocaleString("en-US")+" 次內至少達成一次";
+  let pn, E, Q, usedT;   // usedT：到第 n 次為止，各方式的期望重置次數 [隨機或選擇, 鎖 1 條, 鎖 2 條]
+  if(noGoal||impossible){ pn=0; }
+  else if(st==="lock"){
+    const m=Math.min(n,NL); pn=lk.doneAt[m]; E=lk.E; Q=[lk.q50,lk.q90,lk.q99];
+    usedT=(n<=NL||lk.converged)?[0,1,2].map(t=>lk.cumT[m*3+t]):null;
+  } else {
+    pn=1-Math.pow(1-p,n); E=1/p; Q=[.5,.9,.99].map(q=>nNeed(p,q));
+    usedT=[(1-Math.pow(1-p,n))/p,0,0];
+  }
+  const tail = st==="lock" && lk && lk.feasible && n>NL && !lk.converged;
+  $("sN").textContent = noGoal?"—": impossible?"0.0000%": (tail?"≥ ":"")+pct(pn);
+  if(noGoal || impossible){
     ["sE","sQ50","sQ90","sQ99"].forEach(id=>{ $(id).textContent= noGoal?"—":"無法達成"; $(id).className="v"+(noGoal?"":" bad"); });
   } else {
     $("sE").className=$("sQ50").className=$("sQ90").className=$("sQ99").className="v";
-    $("sE").innerHTML=fmt(1/p)+"<small>次</small>";
-    [["sQ50",.5],["sQ90",.9],["sQ99",.99]].forEach(([id,q])=>$(id).innerHTML=nNeed(p,q).toLocaleString("en-US")+"<small>次</small>");
+    $("sE").innerHTML=fmt(E)+"<small>次</small>";
+    [["sQ50",0],["sQ90",1],["sQ99",2]].forEach(([id,j])=>$(id).innerHTML= Q[j]===null ? "超過 "+NL.toLocaleString("en-US")+"<small>次</small>" : Q[j].toLocaleString("en-US")+"<small>次</small>");
   }
-  // 材料：到第 n 次為止（達成就停止）的期望重置次數 = Σ_{t<n} (1−p)^t = (1 − (1−p)^n) / p
-  const usedN = noGoal?0 : p>0 ? (1-Math.pow(1-p,n))/p : n;
+  // 材料表：到第 n 次為止（達成就停止）與達成目標的期望值
+  const SN={random:"只用隨機",choose:"只用選擇",lock:"隨機＋鎖定"};
+  $("matsTitle").textContent="材料期望值（"+SN[st]+"）";
+  const unit = st==="lock" ? [C.random, C.lock1||{}, C.lock2||{}] : [st==="choose"?C.choose:C.random,{},{}];
+  const fullT = (noGoal||impossible) ? null : st==="lock" ? lk.E3 : [E,0,0];
+  const matOf=T=>{ const o={}; T.forEach((x,t)=>{ for(const [m,q] of Object.entries(unit[t])) o[m]=(o[m]||0)+x*q; }); return o; };
+  const nowM = usedT?matOf(usedT):null, fullM = fullT?matOf(fullT):null;
+  const mats=MAT_ORDER.filter(m=>unit.some(u=>u[m]));
+  const cell=(x,cls)=>'<td class="'+cls+'">'+(x==null?"—":fmt(x))+"</td>";
+  const rowsHtml=[["重置次數",usedT?usedT.reduce((a,b)=>a+b,0):null,fullT?fullT.reduce((a,b)=>a+b,0):null]];
+  if(st==="lock"){ rowsHtml.push(["　其中隨機",usedT?usedT[0]:null,fullT?fullT[0]:null],["　其中鎖 1 條",usedT?usedT[1]:null,fullT?fullT[1]:null]);
+    if(C.lock2) rowsHtml.push(["　其中鎖 2 條",usedT?usedT[2]:null,fullT?fullT[2]:null]); }
+  mats.forEach(m=>rowsHtml.push([m,nowM?nowM[m]||0:null,fullM?fullM[m]||0:null]));
   const tb=$("mats");
-  tb.tHead.innerHTML="<tr><th>材料</th><th>到第 "+n.toLocaleString("en-US")+" 次為止</th><th>達成目標</th></tr>";
-  tb.tBodies[0].innerHTML='<tr><td>重置次數</td><td class="now">'+fmt(usedN)+'</td><td class="sum">'+(noGoal?"—":p>0?fmt(1/p):"無法達成")+"</td></tr>"+
-    Object.entries(COSTS[cur.equip][cur.part]).map(([m,q])=>'<tr><td>'+m+'</td><td class="now">'+fmt(usedN*q)+'</td><td class="sum">'+(noGoal?"—":p>0?fmt(q/p):"無法達成")+"</td></tr>").join("");
+  tb.tHead.innerHTML="<tr><th>項目</th><th>到第 "+n.toLocaleString("en-US")+" 次為止</th><th>達成目標</th></tr>";
+  tb.tBodies[0].innerHTML=rowsHtml.map(([a,x,y])=>"<tr><td>"+a+"</td>"+cell(noGoal?null:x,"now")+((impossible&&!noGoal)?'<td class="sum">無法達成</td>':cell(y,"sum"))+"</tr>").join("");
+  renderCompare(noGoal,impossible,p,C);
+}
+// ===== 策略比較表 =====
+function renderCompare(noGoal,impossible,p,C){
+  const t=$("cmp"), names=["只用隨機","只用選擇","隨機＋鎖定"];
+  t.tHead.innerHTML="<tr><th>項目</th>"+names.map(x=>"<th>"+x+"</th>").join("")+"</tr>";
+  if(noGoal||impossible){ t.tBodies[0].innerHTML='<tr><td colspan="4">'+(noGoal?"尚未設定目標":"目標無法達成")+"</td></tr>"; $("cmpNote").textContent=""; return; }
+  const lk=lockChain(cur), E=1/p;
+  const T=[[E,0,0],[E,0,0],lk.E3];
+  const unit=[[C.random,{},{}],[C.choose,{},{}],[C.random,C.lock1||{},C.lock2||{}]];
+  const tot=j=>T[j].reduce((a,b)=>a+b,0);
+  const matsOf=j=>{ const o={}; T[j].forEach((x,t)=>{ for(const [m,q] of Object.entries(unit[j][t])) o[m]=(o[m]||0)+x*q; }); return o; };
+  const M=[0,1,2].map(matsOf), mats=MAT_ORDER.filter(m=>M.some(o=>o[m]));
+  const q=(x)=> x===null ? "超過 "+NL.toLocaleString("en-US") : x.toLocaleString("en-US");
+  const rows=[["期望重置次數",[0,1,2].map(j=>fmt(tot(j)))],
+    ["　其中鎖定重置",["—","—",fmt(lk.E3[1]+lk.E3[2])]],
+    ["50% 機率達成所需",[q(nNeed(p,.5)),q(nNeed(p,.5)),q(lk.q50)]],
+    ["90% 機率達成所需",[q(nNeed(p,.9)),q(nNeed(p,.9)),q(lk.q90)]]];
+  mats.forEach(m=>rows.push([m,[0,1,2].map(j=>M[j][m]?fmt(M[j][m]):"—")]));
+  t.tBodies[0].innerHTML=rows.map(([a,v])=>"<tr><td>"+a+"</td>"+v.map((x,j)=>'<td class="'+(j===["random","choose","lock"].indexOf(cur.strat)?"now":"sum")+'">'+x+"</td>").join("")+"</tr>").join("");
+  $("cmpNote").textContent="鎖定策略：抽到有用的條時，鎖住數值最高、且鎖住後目標仍可能達成的條（"+(cur.equip==="gold"?"金龍最多 2 條":"骨龍最多 1 條")+"），之後不解鎖。「只用選擇」的達成機率和「只用隨機」相同。藍色為目前選擇的策略。";
+}
+function renderCostTable(){
+  const L={random:"隨機",choose:"選擇",lock1:"鎖定 1 條",lock2:"鎖定 2 條"};
+  let h="<thead><tr><th>裝備</th><th>方式</th><th>消耗</th></tr></thead><tbody>";
+  for(const [eq,en] of [["bone","骨龍"],["gold","金龍"]]) for(const [pt,pn] of [["armor","防具"],["weapon","武器"]])
+    for(const [ty,c] of Object.entries(COSTS[eq][pt])) h+="<tr><td>"+en+pn+"</td><td>"+L[ty]+"</td><td>"+Object.entries(c).map(([m,q])=>m+" × "+q.toLocaleString("en-US")).join("、")+"</td></tr>";
+  $("tblCost").innerHTML=h+"</tbody>";
 }
 function renderTables(){
   const cared=new Set(cur.part==="armor"?cur.sk.filter(Boolean):["古代"]);
@@ -295,6 +443,7 @@ $("tot").addEventListener("input",e=>{ cur.tot=readNum(e.target.value); render()
 $("wmin").addEventListener("change",e=>{ cur.wmin=+e.target.value; render(); });
 $("equip").addEventListener("change",e=>{ cur.equip=e.target.value; fillWeaponSelect(); render(); });
 $("part").addEventListener("change",e=>{ cur.part=e.target.value; renderTables(); render(); });
+$("strat").addEventListener("change",e=>{ cur.strat=e.target.value; render(); });
 $("slider").addEventListener("input",e=>setN(e.target.value));
 $("nInput").addEventListener("input",e=>setN(e.target.value));
 $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
@@ -302,7 +451,7 @@ $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; setN(Ma
 
 // 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
-  $("equip").value=cur.equip; $("part").value=cur.part;
+  $("equip").value=cur.equip; $("part").value=cur.part; $("strat").value=cur.strat; renderCostTable();
   fillSkillSelects(); fillWeaponSelect(); renderTables();
   $("slider").max=$("maxN").value; setN(cur.n);
 }
