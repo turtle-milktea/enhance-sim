@@ -83,7 +83,8 @@ tr.cared td{color:var(--goal);font-weight:500}
 .slctl select{max-width:100%;width:100%}
 .stop table td{white-space:normal;vertical-align:top;line-height:1.6}
 .stop table td:first-child,.stop table td:nth-child(2){white-space:nowrap;font-family:var(--mono)}
-.verdict{font-size:1.05rem;font-weight:600;margin:14px 0 10px;line-height:1.6}
+.verdict{font-size:1.05rem;font-weight:600;margin:4px 0 14px;line-height:1.6}
+#slBody{margin-top:14px}
 .verdict.warn{color:var(--bad)}
 .sbars{display:flex;flex-direction:column;gap:12px}
 .sbar .cap{font-size:.85rem;color:var(--muted);margin-bottom:4px}
@@ -112,6 +113,9 @@ tr.cared td{color:var(--goal);font-weight:500}
 .fold summary{cursor:pointer;font-weight:500}
 header .fold.rules{margin-top:10px}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
+.howto{padding-block:12px;background:color-mix(in srgb,var(--bar) 8%,var(--panel))}
+.howto h2{font-size:.92rem;margin:0 0 4px}
+.howto p{margin:0;font-size:.9rem;line-height:1.6}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -132,11 +136,16 @@ header .fold.rules{margin-top:10px}
         <li>「隨機＋鎖定」：先用隨機重置；抽到有用的條時，鎖住數值最高的那條（骨龍最多 1 條、金龍最多 2 條），但只在鎖住後目標仍可能達成時才鎖；鎖住後不解鎖，之後每次重置依鎖定條數付費。</li>
         <li>「隨機＋鎖定」時，如果裝備上已經有鎖住的條，可以在對應的目標旁勾選「已鎖住」並選數值（金龍另選上排或第四條），從這個狀態開始計算；金龍只鎖 1 條時，之後仍依策略自動鎖第 2 條。</li>
         <li>拖動拉桿，查看重置 n 次內至少達成一次目標的機率。</li>
-        <li>使用情境選「以目前裝備為基準的風險評估」時，可輸入目前的數值，計算止損策略：前 T 次重抽只在達成目標時停止；第 T 次之後，只要抽到不低於保底的結果就收手，避免越抽越差。</li>
+        <li>止損就是「見好就收」：使用情境選「以目前裝備為基準的風險評估」時，可以輸入目前的數值。前面照常重抽；快沒次數的時候，只要抽到不比保底差的結果就停下來，免得最後換成比原本還差的屬性。代價是抽到目標的機會會少一點，所以要在「少抽爛」和「多抽中」之間取捨。</li>
       </ol>
     </details>
     <p class="meta">製作日期：2026-11-22</p>
   </header>
+
+  <section class="panel howto" aria-label="怎麼看機率">
+    <h2>怎麼看機率</h2>
+    <p>例如「100 次內至少達成一次 60%」的意思是，如果有 100 個人都準備好重抽 100 次，大約 60 個人會抽到目標。人數越多，抽到目標的比例就會越接近 60%，這叫做「大數法則」。反過來說，只看自己一個人重抽時，結果可能和 60% 差很多，運氣好或不好都有可能。</p>
+  </section>
 
   <section class="panel controls">
     <div class="row">
@@ -198,16 +207,16 @@ header .fold.rules{margin-top:10px}
 
   <section class="panel stop" id="stopPanel" hidden>
     <h2>止損策略</h2>
+    <p class="verdict" id="slVerdict"></p>
     <p class="hint" id="slStratNote" hidden>止損目前只算「只用隨機」的情況，下面的數字都是照「只用隨機」重抽算出來的。</p>
     <div class="slctl">
       <label for="slMode">止損點的決定方式</label><select id="slMode" autocomplete="off">
-        <option value="r50" selected>建議（抽爛時，剩餘次數有 50% 機率抽回保底以上）</option>
+        <option value="r50" selected>推薦的做法（抽爛了還有一半的機會抽回來，就繼續抽）</option>
         <option value="risk">指定可接受的倒退機率</option>
-        <option value="custom">自訂止損次數 T</option></select>
+        <option value="custom">我自己決定第幾次後收手</option></select>
       <span class="pair" id="slRiskWrap" hidden><label for="slRisk">可接受的倒退機率</label><input type="number" id="slRisk" autocomplete="off" min="0" max="100" step="1" value="10"><span class="lab">%</span></span>
-      <span class="pair" id="slTWrap" hidden><label for="slT">止損次數 T</label><input type="number" id="slT" autocomplete="off" min="0" max="10000000" step="1" value="0"></span>
+      <span class="pair" id="slTWrap" hidden><label for="slT">第幾次後收手</label><input type="number" id="slT" autocomplete="off" min="0" max="10000000" step="1" value="0"></span>
     </div>
-    <p class="verdict" id="slVerdict"></p>
     <div id="slBody">
       <p class="benefit" id="slBenefit" hidden></p>
       <div class="sbars" id="slBars"></div>
@@ -619,15 +628,15 @@ function renderRisk(noGoal){
   else Ts=Math.max(0,Math.min(n,Math.round(+$("slT").value||0)));
   const base3=riskOutcome(P,n,n), st=riskOutcome(P,n,Ts);
   const B="總和 "+base, G="目標";
-  if(Ts===0) say(mode==="r50" ? "不建議重抽：一旦抽到比保底差的結果，要 "+r50+" 次才有 50% 的機會抽回保底以上，但預算只有 "+n+" 次。" : "止損次數 T = 0：等於不重抽，維持目前的數值。", true), body.hidden=false;
+  if(Ts===0) say(mode==="r50" ? "現在不建議重抽。萬一抽到比保底差的結果，要再重抽 "+r50+" 次，才有一半的機會抽回保底以上，可是你只準備了 "+n+" 次。" : "止損次數 T = 0：等於不重抽，維持目前的數值。", true), body.hidden=false;
   else if(Ts>=n){ V.className="verdict"; V.textContent="T = "+n+"：等於不止損，用完全部 "+n+" 次。"; }
   else { V.className="verdict"; V.textContent = mode==="risk"
       ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次重抽，之後只要抽到不低於保底（"+B+"）的結果就收手；如果那時的結果比保底差，就繼續重抽，抽到保底以上再收手。"
-      : (mode==="r50"?"建議：":"自訂：")+"重抽到第 "+Ts+" 次後，只要抽到不低於保底（"+B+"）的結果就收手。"; }
+      : (mode==="r50"?"建議：":"自訂：")+"前 "+Ts+" 次照常重抽。第 "+Ts+" 次以後，只要抽到不比保底（"+B+"）差的結果，就停下來。"; }
   const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
     [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
     '</div><div class="nums">到達 '+pc(a[0])+'・維持 '+pc(a[1])+'・倒退 '+pc(a[2])+'</div></div>';
-  $("slBars").innerHTML=bar("用完 "+n+" 次（不止損）",base3)+(Ts<n?bar(Ts===0?"不重抽（T = 0）":"第 "+Ts+" 次後止損",st):"");
+  $("slBars").innerHTML=bar("一直重抽到 "+n+" 次用完（不止損）",base3)+(Ts<n?bar(Ts===0?"不重抽":(mode==="r50"?"照建議，":"")+"第 "+Ts+" 次後見好就收",st):"");
   // 第 T 次的結果
   const r=n-Ts, a=1-P.pg, C=COSTS[cur.equip][cur.part];
   $("slAtTH").textContent="第 "+Ts+" 次重抽的結果（剩下 "+r+" 次）";
@@ -651,10 +660,10 @@ function renderRisk(noGoal){
     ex.push("<li>換句話說：放棄 "+pp(base3[0]-st[0])+" 的達成機會，換到倒退風險減少 "+pp(base3[2]-st[2])+"。</li>");
     ex.push("<li>止損時平均實際重抽 "+fmt(st[3])+" 次（約 "+Object.entries(C).map(([m,qq])=>m+" "+fmt(st[3]*qq)).join("、")+"），剩下的材料可以留到下次。</li>");
   }
-  if(Ts===0) ex.push("<li>T = 0 表示不重抽，維持目前的數值。若仍要重抽，請參考上方「用完 "+n+" 次」的結果。</li>");
+  if(Ts===0) ex.push("<li>T = 0 表示不重抽，維持目前的數值。若仍要重抽，請參考上方「一直重抽到 "+n+" 次用完」的結果。</li>");
   ex.push("<li>預設的 T 怎麼來：抽到比保底差的結果之後，要 "+r50+" 次才有 50% 的機會抽回保底以上。所以在最後 "+r50+" 次之前（第 "+n+" − "+r50+" = "+T50+" 次後），只要抽到不低於保底的結果就收手。</li>");
   ex.push("<li>怎麼選 T：T 越大越積極，越接近「用完全部次數」，達成目標的機會較高，但倒退的風險也較高；T 越小越保守。保底水準也可以自訂：設得越低，越容易收手。</li>");
-  ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次重抽；「自訂止損次數 T」可以直接試算任何 T。</li>");
+  ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次重抽；「我自己決定第幾次後收手」可以直接試算任何時間點。</li>");
   $("slExplain").innerHTML=ex.join("");
   // 參考曲線（取樣最多 400 點）
   const step=Math.max(1,Math.ceil(n/400)), pts=[]; for(let t=0;t<=n;t+=step) pts.push(t); if(pts[pts.length-1]!==n) pts.push(n);
