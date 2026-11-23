@@ -108,6 +108,7 @@ tr.cared td{color:var(--goal);font-weight:500}
 .fold{margin-top:16px}
 .fold summary{cursor:pointer;font-weight:500}
 header .fold.rules{margin-top:10px}
+.benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -199,6 +200,7 @@ header .fold.rules{margin-top:10px}
     </div>
     <p class="verdict" id="slVerdict"></p>
     <div id="slBody">
+      <p class="benefit" id="slBenefit" hidden></p>
       <div class="sbars" id="slBars"></div>
       <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於保底、未達目標）</span><span><i class="sw down"></i>倒退（低於保底）</span></div>
       <h3 id="slAtTH"></h3>
@@ -210,7 +212,7 @@ header .fold.rules{margin-top:10px}
       </details>
       <details class="adv">
         <summary>參考數據：不同止損次數 T 的比較</summary>
-        <p class="note">怎麼看這張圖：橫軸是止損次數 T（第 T 次之後，只要抽到不低於保底的結果就收手），縱軸是用完預算後的結果機率。橘線是「到達目標」，紅線是「倒退」。T 越往右越積極，到達目標的機會增加，但倒退的風險也增加；T 越往左越保守。藍色直線是目前採用的 T，虛線是預設建議的 T。可以用這張圖看「多冒一點倒退風險，能換到多少到達機率」。</p>
+        <p class="note" id="slChartNote"></p>
         <div id="slChart" class="slchart"></div>
       </details>
     </div>
@@ -453,10 +455,32 @@ function renderRisk(noGoal){
   $("slExplain").innerHTML=ex.join("");
   // 參考曲線（取樣最多 400 點）
   const step=Math.max(1,Math.ceil(n/400)), pts=[]; for(let t=0;t<=n;t+=step) pts.push(t); if(pts[pts.length-1]!==n) pts.push(n);
-  drawRiskChart(pts.map(t=>[t,riskOutcome(P,n,t)]),n,Ts,T50);
+  const ptsO=pts.map(t=>[t,riskOutcome(P,n,t)]);
+  drawRiskChart(ptsO,n,Ts,T50);
+  chartNote(Math.max(...ptsO.map(([,o])=>o[2])),Ts,T50,"只要抽到不低於保底的結果","到達目標");
+  showBenefit(base3,st,Ts,n,B,"比保底差");
 }
 const pc=x=>(x*100).toFixed(1)+"%";
 const pp=x=>Math.abs(x*100).toFixed(1)+" 個百分點";
+// 止損的好處：放在「止損點的決定方式」下面的提示
+function showBenefit(base,st,Ts,n,S,word){
+  const el=$("slBenefit");
+  if(!(Ts>0&&Ts<n&&base[2]>0.0005)){ el.hidden=true; return; }
+  const red=1-st[2]/base[2];
+  const how = red>=0.85?"幾乎都避開了" : red>=0.6?"少了一大半" : red>=0.4?"差不多少了一半" : red>=0.15?"少了一些" : "只少了一點點";
+  const d=base[0]-st[0];
+  const cost = d<0.005 ? "到達目標的機會幾乎沒有變（"+pc(base[0])+" → "+pc(st[0])+"）" : "代價是到達目標的機會從 "+pc(base[0])+" 變成 "+pc(st[0])+"，少了 "+pp(d);
+  el.innerHTML='<b>止損的好處：</b>最後'+word+'的機率從 '+pc(base[2])+' 降到 '+pc(st[2])+'，'+how+'；'+cost+'。';
+  el.hidden=false;
+}
+// 參考圖的說明：依照圖上實際畫出來的線來寫
+function chartNote(maxDown,Ts,T50,stopWord,reach){
+  const t=["怎麼看這張圖：橫軸是止損次數 T（第 T 次之後，"+stopWord+"就收手），縱軸是用完預算後的結果機率。"];
+  if(maxDown<0.005) t.push("橘線是「"+reach+"」。這個設定下，不論 T 是多少，倒退的機率都幾乎是 0，所以代表倒退的紅線貼在最下面的 0% 線上，看不出來；這時 T 越往右，"+reach+"的機會越高。");
+  else t.push("橘線是「"+reach+"」，紅線是「倒退」。T 越往右越積極，"+reach+"的機會增加，但倒退的風險也增加；T 越往左越保守。可以用這張圖看「多冒一點倒退風險，能換到多少"+reach+"的機會」。");
+  t.push(Ts===T50 ? "藍色直線是目前採用的 T，剛好就是預設建議的 T。" : "藍色直線是目前採用的 T，灰色虛線是預設建議的 T。");
+  $("slChartNote").textContent=t.join("");
+}
 function drawRiskChart(pts,n,Ts,T50){
   const W=640,H=230,L=40,Rr=12,Tp=12,B=28, X=t=>L+(W-L-Rr)*t/Math.max(1,n), Y=p=>Tp+(H-Tp-B)*(1-p);
   const line=c=>pts.map(([t,o],i)=>(i?"L":"M")+X(t).toFixed(1)+","+Y(o[c]).toFixed(1)).join("");
