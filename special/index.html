@@ -136,13 +136,14 @@ tr.cared td{color:var(--goal);font-weight:500}
         <option value="risk">以目前裝備為基準的風險評估（止損）</option></select>
     </div>
     <div id="armorGoals" class="goals">
-      <span class="lab">技能 1</span><div class="g"><select id="sk0" autocomplete="off"></select><label for="min0">至少</label><input type="number" id="min0" autocomplete="off" min="0" step="20" placeholder="不限"></div>
-      <span class="lab">技能 2</span><div class="g"><select id="sk1" autocomplete="off"></select><label for="min1">至少</label><input type="number" id="min1" autocomplete="off" min="0" step="20" placeholder="不限"></div>
-      <span class="lab">技能 3</span><div class="g"><select id="sk2" autocomplete="off"></select><label for="min2">至少</label><input type="number" id="min2" autocomplete="off" min="0" step="20" placeholder="不限"></div>
-      <span class="lab">總和</span><div class="g"><label for="tot">所選技能總和至少</label><input type="number" id="tot" autocomplete="off" min="0" step="20" placeholder="不限"></div>
+      <span class="lab" style="grid-column:1/-1;font-weight:600;color:var(--fg)">目標（希望重抽達到的數值）</span>
+      <span class="lab">技能 1</span><div class="g"><select id="sk0" autocomplete="off"></select><label for="min0">目標至少</label><input type="number" id="min0" autocomplete="off" min="0" step="20" placeholder="不限"></div>
+      <span class="lab">技能 2</span><div class="g"><select id="sk1" autocomplete="off"></select><label for="min1">目標至少</label><input type="number" id="min1" autocomplete="off" min="0" step="20" placeholder="不限"></div>
+      <span class="lab">技能 3</span><div class="g"><select id="sk2" autocomplete="off"></select><label for="min2">目標至少</label><input type="number" id="min2" autocomplete="off" min="0" step="20" placeholder="不限"></div>
+      <span class="lab">總和</span><div class="g"><label for="tot">目標：所選技能總和至少</label><input type="number" id="tot" autocomplete="off" min="0" step="20" placeholder="不限"></div>
     </div>
     <div id="weaponGoals" class="row" hidden>
-      <span class="pair"><label for="wmin">古代技能總和至少</label><select id="wmin" autocomplete="off"></select></span>
+      <span class="pair"><label for="wmin">目標：古代技能總和至少</label><select id="wmin" autocomplete="off"></select></span>
     </div>
     <p class="hint" id="goalHint"></p>
     <div id="riskIn" class="riskin" hidden>
