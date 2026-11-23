@@ -113,6 +113,8 @@ tr.cared td{color:var(--goal);font-weight:500}
 .fold{margin-top:16px}
 .fold summary{cursor:pointer;font-weight:500}
 header .fold.rules{margin-top:10px}
+.count{margin:-8px 0 14px;line-height:1.6}
+.count b{font-weight:600}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 .howto{padding-block:12px;background:color-mix(in srgb,var(--bar) 8%,var(--panel))}
 .howto h2{font-size:.92rem;margin:0 0 4px}
@@ -211,6 +213,7 @@ header .fold.rules{margin-top:10px}
   <section class="panel stop" id="stopPanel" hidden>
     <h2>止損策略</h2>
     <p class="verdict" id="slVerdict"></p>
+    <p class="count" id="slCount" hidden></p>
     <p class="hint" id="slStratNote" hidden>止損目前只算「只用隨機」的情況，下面的數字都是照「只用隨機」重抽算出來的。</p>
     <div class="slctl">
       <label for="slMode">止損點的決定方式</label><select id="slMode" autocomplete="off">
@@ -621,7 +624,7 @@ function renderRisk(noGoal){
   $("baseHint").textContent= cur.base!=null ? "（自訂；目前總和 "+curTot+"）" : "（預設 = 目前總和 "+curTot+"）";
   $("base").placeholder=String(curTot);
   const mode=$("slMode").value; $("slRiskWrap").hidden=mode!=="risk"; $("slTWrap").hidden=mode!=="custom";
-  const V=$("slVerdict"), body=$("slBody"), n=cur.n;
+  const V=$("slVerdict"), body=$("slBody"), n=cur.n; $("slCount").hidden=true;
   const say=(t,warn)=>{ V.className="verdict"+(warn?" warn":""); V.textContent=t; body.hidden=true; };
   if(noGoal) return say("請先在上方設定目標。");
   const g=goalOf2(cur);
@@ -642,7 +645,10 @@ function renderRisk(noGoal){
   else if(Ts>=n){ V.className="verdict"; V.textContent="T = "+n+"：等於不止損，用完全部 "+n+" 次。"; }
   else { V.className="verdict"; V.textContent = mode==="risk"
       ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次重抽，之後只要抽到不低於保底（"+B+"）的結果就收手；如果那時的結果比保底差，就繼續重抽，抽到保底以上再收手。"
-      : (mode==="r50"?"建議：":"自訂：")+"前 "+Ts+" 次照常重抽。第 "+Ts+" 次以後，只要抽到不比保底（"+B+"）差的結果，就停下來。"; }
+      : (mode==="r50"?"建議：":"自訂：")+"前 "+Ts+" 次照常重抽。第 "+Ts+" 次以後，只要抽到不比保底（"+B+"）差的結果，就停下來。";
+    // 怎麼確認已經到第 Ts 次：隨機重抽每次的時間之沙（骨龍）或寶玉碎片（金龍）用量固定
+    const rc=COSTS[cur.equip][cur.part].random, cm=cur.equip==="gold"?JADE:SAND, q=rc[cm], C=$("slCount");
+    C.innerHTML="從開始重抽起算，用掉 <b>"+(Ts*q).toLocaleString("en-US")+" 個"+cm+"</b>（每次 "+q+" 個），就是第 "+Ts+" 次。"; C.hidden=false; }
   const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
     [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
     '</div><div class="nums">到達 '+pc(a[0])+'・維持 '+pc(a[1])+'・倒退 '+pc(a[2])+'</div></div>';

@@ -161,13 +161,13 @@ header .fold.rules{margin-top:10px}
         <span class="pair" id="evoWrap"><label for="evo">進化時機</label><select id="evo" autocomplete="off"></select></span>
       </div>
     </div>
-    <input type="range" id="slider" autocomplete="off" min="0" max="5000" value="0" aria-label="強化次數">
+    <input type="range" id="slider" autocomplete="off" min="0" max="200" value="0" aria-label="強化次數">
     <div class="row">
       <button id="dec">−1</button><button id="inc">+1</button>
       <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="0"></span>
       <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
       <span class="hint" id="multHint"></span>
-      <span class="pair"><label for="maxN">拉桿上限</label><select id="maxN" autocomplete="off"><option>200</option><option>1000</option><option selected>5000</option><option>20000</option></select></span>
+      <span class="pair"><label for="maxN">拉桿上限</label><select id="maxN" autocomplete="off"><option selected>200</option><option>1000</option><option>5000</option><option>20000</option></select></span>
       <span class="pair"><label for="scale">橫軸</label><select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
     </div>
   </section>
@@ -504,12 +504,12 @@ function countHint(sl,Ts){
   const BONE="古代龍的骨頭碎片", GOLD="金龍的寶玉碎片", per={bone:new Set(),gold:new Set()};
   sl.states.forEach((st,i)=>{ if(i===sl.g) return; const {eq,lv}=parse(st);
     const m=eq==="bone"?BONE:GOLD, arr=EQ[eq].mat[cur.part][m]; per[eq].add(arr?arr[lv+1]:0); });
-  if(per.bone.size>1||per.gold.size>1||[...per.bone,...per.gold].some(x=>!x)) return "怎麼知道到第 "+Ts+" 次了：請自己記下強化的次數。";
+  if(per.bone.size>1||per.gold.size>1||[...per.bone,...per.gold].some(x=>!x)) return "請自己記下強化的次數。";
   const b=[...per.bone][0], g=[...per.gold][0], evo=parse(cur.start).eq==="bone"&&parse(cur.target).eq==="gold";
-  if(!g) return "怎麼知道到第 "+Ts+" 次了：從開始強化起算，用掉 <b>"+(Ts*b).toLocaleString("en-US")+" 個"+BONE+"</b>（每次 "+b+" 個），就是第 "+Ts+" 次。";
-  if(!b&&!evo) return "怎麼知道到第 "+Ts+" 次了：從開始強化起算，用掉 <b>"+(Ts*g).toLocaleString("en-US")+" 個"+GOLD+"</b>（每次 "+g+" 個），就是第 "+Ts+" 次。";
+  if(!g) return "從開始強化起算，用掉 <b>"+(Ts*b).toLocaleString("en-US")+" 個"+BONE+"</b>（每次 "+b+" 個），就是第 "+Ts+" 次。";
+  if(!b&&!evo) return "從開始強化起算，用掉 <b>"+(Ts*g).toLocaleString("en-US")+" 個"+GOLD+"</b>（每次 "+g+" 個），就是第 "+Ts+" 次。";
   const ev=EVOLVE[GOLD]||0;
-  return "怎麼知道到第 "+Ts+" 次了：從開始強化起算，"+(b
+  return "從開始強化起算，"+(b
     ? "把用掉的"+BONE+"除以 "+b+"；如果已經進化，再加上用掉的"+GOLD+"扣掉進化用的 "+ev+" 個後除以 "+g+"。加起來是 <b>"+Ts+"</b>"
     : "把用掉的"+GOLD+"扣掉進化用的 "+ev+" 個後除以 "+g+"，得到 <b>"+Ts+"</b>")+"，就是第 "+Ts+" 次。";
 }

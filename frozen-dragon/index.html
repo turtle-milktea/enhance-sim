@@ -69,6 +69,18 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .fold{margin-top:16px}
 .fold summary{cursor:pointer;font-weight:500}
 header .fold.rules{margin-top:10px}
+.mats{margin-top:6px}
+.mats table td:first-child,.mats table th:first-child{text-align:left}
+.mats table td{font-family:var(--mono)}
+.mats table td:first-child{font-family:var(--sans)}
+.mats td.sum{font-weight:600}
+.mats td.now{font-weight:600;color:var(--bar)}
+.matsNote{font-size:.8rem;color:var(--muted);margin:8px 0 0;line-height:1.6}
+.mats table td:not(:first-child),.mats table th:not(:first-child){text-align:right}
+.mats h2{font-size:1rem;margin:0 0 8px}
+@media (max-width:480px){.mats table{font-size:.74rem}.mats th,.mats td{padding:5px 4px}.mats td:first-child,.mats th{white-space:normal}.mats td:first-child{min-width:4.5em}}
+.count{margin:-8px 0 14px;line-height:1.6}
+.count b{font-weight:600}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 .stop #slAtT th{white-space:normal;vertical-align:bottom}
 .stop #slAtT th:first-child{min-width:5em}
@@ -165,6 +177,7 @@ td.dropcell{color:var(--bad);font-weight:500}
   <section class="panel stop" id="stopPanel">
     <h2>止損策略</h2>
     <p class="verdict" id="slVerdict"></p>
+    <p class="count" id="slCount" hidden></p>
     <div class="slctl">
       <label for="slMode">止損點的決定方式</label><select id="slMode" autocomplete="off">
         <option value="r50" selected>推薦的做法（掉下去還有一半的機會爬回來，就繼續衝）</option>
@@ -192,6 +205,12 @@ td.dropcell{color:var(--bad);font-weight:500}
     </div>
   </section>
 
+  <section class="panel mats">
+    <h2>材料期望值</h2>
+    <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody></table></div>
+    <p class="matsNote">「到第 n 次為止」：強化 n 次時平均已消耗的材料（到達目標後就停止強化，n 夠大時會等於「全部完成」）。「全部完成」：從起點強化到結束時平均會用掉的材料。+11～+15 每次強化的用量都一樣。</p>
+  </section>
+
   <p class="note" id="note"></p>
 
   <section class="panel">
@@ -206,6 +225,8 @@ td.dropcell{color:var(--bad);font-weight:500}
 // 內部等級 k = 0..5 對應遊戲中的 +10～+15
 const LV=k=>"+"+(k+10);
 const BASE_S=0.1, MAXN=20000, MULT_MIN=1, MULT_MAX=10;
+// 每次強化的材料（+11～+15 用量相同）
+const MAT=[["覺醒魔力蛋",20],["殘影的記錄",3],["金幣",5000]];
 // 成功率：基礎 10% 乘上倍率，超過 100% 以 100% 計
 const rateOf=m=>Math.min(1,BASE_S*m);
 const $=id=>document.getElementById(id);
@@ -258,7 +279,10 @@ function table(start,T,m){
     v=w;
   }
   let med=null; for(let n=0;n<=MAXN;n++){ if(out[n*6+T]>0.5){med=n;break;} }
-  return cache[key]={out,med,...analytic(start,T,m)};
+  // 到第 n 次為止平均已強化的次數（停在目標或 +15 就不再強化）
+  const att=new Float64Array(MAXN+1);
+  for(let n=1;n<=MAXN;n++){ let a=0; for(let i=0;i<6;i++) if(i!==T&&i!==5) a+=out[(n-1)*6+i]; att[n]=att[n-1]+a; }
+  return cache[key]={out,med,att,...analytic(start,T,m)};
 }
 
 // ===== 止損策略 =====
@@ -312,7 +336,7 @@ const pp=x=>Math.abs(x*100).toFixed(1)+" 個百分點";
 function renderStop(){
   const n=cur.n, T=cur.target, st=cur.start, mode=$("slMode").value;
   $("slRiskWrap").hidden=mode!=="risk"; $("slTWrap").hidden=mode!=="custom";
-  const V=$("slVerdict"), body=$("slBody");
+  const V=$("slVerdict"), body=$("slBody"); $("slCount").hidden=true;
   const sl=stopLoss(st,T,cur.mult,n);
   if(sl.na){ V.className="verdict"; V.textContent=sl.na; body.hidden=true; return; }
   if(n===0){ V.className="verdict"; V.textContent="請先用上方的拉桿設定強化次數 n（你準備好的強化材料可以強化幾次）。"; body.hidden=true; return; }
@@ -338,6 +362,9 @@ function renderStop(){
       ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次強化，之後只要停在 "+S+" 就收手；如果那時還在 "+S+" 以下，就繼續強化，爬回 "+S+" 再收手。"
       : (mode==="r50" ? "建議：" : "自訂：")+"前 "+Ts+" 次照常強化。第 "+Ts+" 次以後，只要回到 "+S+"，就停下來。";
   }
+  const C=$("slCount"); C.hidden=!(Ts>0&&Ts<n);
+  if(!C.hidden) C.innerHTML="從開始強化起算，用掉 <b>"+(Ts*MAT[0][1]).toLocaleString("en-US")+" 個"+MAT[0][0]+"</b>（每次 "+MAT[0][1]+" 個），就是第 "+Ts+" 次。";
+
   // 堆疊長條
   const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
     [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
@@ -450,6 +477,10 @@ function render(){
   if(t.e!==null){ $("kE").textContent="期望總次數（自起點）"; $("sE").textContent=t.e.toFixed(3); }
   else { $("kE").textContent="最終能到達 "+LV(T)+" 的機率"; $("sE").textContent=pct(t.h); }
   $("sMed").textContent = t.med!==null ? t.med : (t.h<=0.5 ? "不會超過 50%" : "> "+MAXN);
+  // 材料表
+  const fm=x=>x>=1000?Math.round(x).toLocaleString("en-US"):(+x.toFixed(1)).toLocaleString("en-US");
+  $("mats").tHead.innerHTML="<tr><th>材料</th><th>到第 "+n+" 次為止</th><th>全部完成</th></tr>";
+  $("mats").tBodies[0].innerHTML=MAT.map(([m,q])=>"<tr><td>"+m+'</td><td class="now">'+fm(t.att[n]*q)+'</td><td class="sum">'+fm(t.att[MAXN]*q)+"</td></tr>").join("");
   $("note").textContent = (T<cur.start
       ? "目標低於起始等級：代表「掉到 "+LV(T)+"」的機率。若途中先到達 +15 就會停止，因此最終機率可能小於 100%。"
       : T===cur.start ? "目標等於起始等級：第 0 次就已達成。" : "")

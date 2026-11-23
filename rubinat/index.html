@@ -111,14 +111,14 @@ header .fold.rules{margin-top:10px}
         <span class="pair"><label for="count">飾品數量</label><select id="count" autocomplete="off"><option value="1" selected>1 個</option><option value="2">2 個</option><option value="3">3 個</option><option value="4">4 個</option></select></span>
       </div>
     </div>
-    <input type="range" id="slider" autocomplete="off" min="0" max="1000" value="0" aria-label="已開箱數">
+    <input type="range" id="slider" autocomplete="off" min="0" max="300" value="0" aria-label="已開箱數">
     <div class="row">
-      <button id="dec">−1</button><button id="inc">+1</button>
+      <button id="dec">−1</button><button id="inc">+1</button><button id="inc10" title="買 10 箱">+10</button><button id="inc100" title="買 100 箱">+100</button>
       <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="5000" value="0"></span>
       <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
       <span class="hint" id="multHint"></span>
       <span class="pair"><label for="maxN">拉桿上限</label>
-      <select id="maxN" autocomplete="off"><option>200</option><option>500</option><option selected>1000</option><option>2000</option><option>5000</option></select></span>
+      <select id="maxN" autocomplete="off"><option>200</option><option selected>300</option><option>500</option><option>1000</option><option>2000</option><option>5000</option></select></span>
       <span class="pair"><label for="scale">橫軸</label>
       <select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
     </div>
@@ -304,14 +304,14 @@ function limitTarget(){
 }
 function setN(n,fromBox){   // fromBox：從「直接輸入」打字時不回寫欄位，避免中文輸入法重複輸入數字
   n=Math.max(0,Math.min(MAXN,Math.round(+n||0))); cur.n=n;
-  if(n>+$("slider").max){ const m=[200,500,1000,2000,5000].find(o=>o>=n); $("maxN").value=m; $("slider").max=m; }
+  if(n>+$("slider").max){ const m=[200,300,500,1000,2000,5000].find(o=>o>=n); $("maxN").value=m; $("slider").max=m; }
   $("slider").value=n; if(!fromBox) $("nInput").value=n; render();
 }
 $("slider").addEventListener("input",e=>setN(e.target.value));
 $("nInput").addEventListener("input",e=>{ if(!e.isComposing) setN(e.target.value,true); });
 $("nInput").addEventListener("compositionend",e=>setN(e.target.value,true));
 $("nInput").addEventListener("change",e=>setN(e.target.value));   // 離開欄位時，改成實際採用的次數
-$("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
+$("inc").onclick=()=>setN(cur.n+1); $("inc10").onclick=()=>setN(cur.n+10); $("inc100").onclick=()=>setN(cur.n+100); $("dec").onclick=()=>setN(cur.n-1);
 $("start").addEventListener("change",e=>{cur.start=+e.target.value; limitTarget(); render();});
 $("target").addEventListener("change",e=>{cur.target=Math.max(cur.start,+e.target.value); limitTarget(); render();});
 $("scale").addEventListener("change",render);
