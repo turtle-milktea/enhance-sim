@@ -42,7 +42,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .stop table td{white-space:normal;vertical-align:top;line-height:1.6}
 .stop table td:first-child,.stop table td:nth-child(2){white-space:nowrap;font-family:var(--mono)}
 .verdict{font-size:1.05rem;font-weight:600;margin:4px 0 14px;line-height:1.6}
-.howto{font-size:.85rem;color:var(--muted);margin:14px 0 10px;line-height:1.6}
+.howto{padding-block:12px;background:color-mix(in srgb,var(--bar) 8%,var(--panel))}
+.howto h2{font-size:.92rem;margin:0 0 4px}
+.howto p{margin:0;font-size:.9rem;line-height:1.6}
+#slBody{margin-top:14px}
 .verdict.warn{color:var(--bad)}
 .sbars{display:flex;flex-direction:column;gap:12px}
 .sbar .cap{font-size:.85rem;color:var(--muted);margin-bottom:4px}
@@ -110,6 +113,11 @@ td.dropcell{color:var(--bad);font-weight:500}
     <p class="meta">製作日期：2026-11-03</p>
   </header>
 
+  <section class="panel howto" aria-label="怎麼看機率">
+    <h2>怎麼看機率</h2>
+    <p>例如「到達 60%」的意思是，如果有 100 個人都照這樣強化，大約 60 個人會衝上目標。</p>
+  </section>
+
   <section class="panel controls">
     <div class="row" style="justify-content:space-between">
       <div><label>強化次數 n</label><div class="n-big" id="nShow">0</div></div>
@@ -157,7 +165,6 @@ td.dropcell{color:var(--bad);font-weight:500}
       <span class="pair" id="slTWrap" hidden><label for="slT">第幾次後收手</label><input type="number" id="slT" autocomplete="off" min="0" max="20000" step="1" value="0"></span>
     </div>
     <div id="slBody">
-      <p class="howto">怎麼看機率：例如「到達 60%」的意思是，如果有 100 個人都照這樣強化，大約 60 個人會衝上目標。</p>
       <div class="sbars" id="slBars"></div>
       <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於起點、未達目標）</span><span><i class="sw down"></i>倒退（低於起點）</span></div>
       <h3 id="slAtTH"></h3>
