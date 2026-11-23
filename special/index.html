@@ -116,6 +116,8 @@ header .fold.rules{margin-top:10px}
 .howto{padding-block:12px;background:color-mix(in srgb,var(--bar) 8%,var(--panel))}
 .howto h2{font-size:.92rem;margin:0 0 4px}
 .howto p{margin:0;font-size:.9rem;line-height:1.6}
+.stop #slAtT th{white-space:normal;vertical-align:bottom}
+.stop #slAtT th:first-child{min-width:5em}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -200,9 +202,9 @@ header .fold.rules{margin-top:10px}
     <div class="stat"><div class="k">單次全部重抽達成目標</div><div class="v" id="sP"></div></div>
     <div class="stat"><div class="k" id="kN"></div><div class="v" id="sN"></div></div>
     <div class="stat"><div class="k">期望重置次數</div><div class="v" id="sE"></div></div>
-    <div class="stat"><div class="k">50% 機率達成所需次數</div><div class="v" id="sQ50"></div></div>
-    <div class="stat"><div class="k">90% 機率達成所需次數</div><div class="v" id="sQ90"></div></div>
-    <div class="stat"><div class="k">99% 機率達成所需次數</div><div class="v" id="sQ99"></div></div>
+    <div class="stat"><div class="k">達成 50% 機率所需次數</div><div class="v" id="sQ50"></div></div>
+    <div class="stat"><div class="k">達成 90% 機率所需次數</div><div class="v" id="sQ90"></div></div>
+    <div class="stat"><div class="k">達成 99% 機率所需次數</div><div class="v" id="sQ99"></div></div>
   </section>
 
   <section class="panel stop" id="stopPanel" hidden>
@@ -222,14 +224,14 @@ header .fold.rules{margin-top:10px}
       <div class="sbars" id="slBars"></div>
       <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於保底、未達目標）</span><span><i class="sw down"></i>倒退（低於保底）</span></div>
       <h3 id="slAtTH"></h3>
-      <div class="tblwrap"><table id="slAtT"><thead><tr><th>第 T 次的結果</th><th>機率</th><th>建議與之後的機率</th></tr></thead><tbody></tbody></table></div>
+      <div class="tblwrap"><table id="slAtT"><thead><tr><th>收手那一刻的結果</th><th>機率</th><th>接下來怎麼做（建議與止損線之後的機率）</th></tr></thead><tbody></tbody></table></div>
       <div class="below" id="slBelow"></div>
       <details class="fold">
         <summary>策略解讀</summary>
         <ul class="explain" id="slExplain"></ul>
       </details>
       <details class="adv">
-        <summary>參考數據：不同止損次數 T 的比較</summary>
+        <summary>參考：提早或延後收手，結果會怎麼變</summary>
         <p class="note" id="slChartNote"></p>
         <div id="slChart" class="slchart"></div>
       </details>
@@ -525,8 +527,8 @@ function renderCompare(noGoal,impossible,p,C){
   const q=(x)=> x===null ? "超過 "+NL.toLocaleString("en-US") : x.toLocaleString("en-US");
   const rows=[["期望重置次數",[0,1,2].map(j=>fx(j,fmt(tot(j))))],
     ["　其中鎖定重置",["—","—",fx(2,()=>lockDone?"0":fmt(lk.E3[1]+lk.E3[2]))]],
-    ["50% 機率達成所需",[q(nNeed(p,.5)),q(nNeed(p,.5)),fx(2,()=>lockDone?"0":q(lk.q50))]],
-    ["90% 機率達成所需",[q(nNeed(p,.9)),q(nNeed(p,.9)),fx(2,()=>lockDone?"0":q(lk.q90))]]];
+    ["達成 50% 機率所需次數",[q(nNeed(p,.5)),q(nNeed(p,.5)),fx(2,()=>lockDone?"0":q(lk.q50))]],
+    ["達成 90% 機率所需次數",[q(nNeed(p,.9)),q(nNeed(p,.9)),fx(2,()=>lockDone?"0":q(lk.q90))]]];
   mats.forEach(m=>rows.push([m,[0,1,2].map(j=>fx(j,M[j][m]?fmt(M[j][m]):"—"))]));
   t.tBodies[0].innerHTML=rows.map(([a,v])=>"<tr><td>"+a+"</td>"+v.map((x,j)=>'<td class="'+(j===["random","choose","lock"].indexOf(cur.strat)?"now":"sum")+'">'+x+"</td>").join("")+"</tr>").join("");
   $("cmpNote").textContent=(lk.custom?"「隨機＋鎖定」欄從目前設定的起始鎖定開始計算；「只用隨機」「只用選擇」則是整件重抽。":"")+"鎖定策略：抽到有用的條時，鎖住數值最高、且鎖住後目標仍可能達成的條（"+(cur.equip==="gold"?"金龍最多 2 條":"骨龍最多 1 條")+"），之後不解鎖。「只用選擇」的達成機率和「只用隨機」相同。藍色為目前選擇的策略。";

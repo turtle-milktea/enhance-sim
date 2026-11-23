@@ -70,6 +70,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .fold summary{cursor:pointer;font-weight:500}
 header .fold.rules{margin-top:10px}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
+.stop #slAtT th{white-space:normal;vertical-align:bottom}
+.stop #slAtT th:first-child{min-width:5em}
 [hidden]{display:none!important}
 .chart{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:260px;border-bottom:1px solid var(--line);position:relative}
 .col{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
@@ -176,14 +178,14 @@ td.dropcell{color:var(--bad);font-weight:500}
       <div class="sbars" id="slBars"></div>
       <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於起點、未達目標）</span><span><i class="sw down"></i>倒退（低於起點）</span></div>
       <h3 id="slAtTH"></h3>
-      <div class="tblwrap"><table id="slAtT"><thead><tr><th>第 T 次時的等級</th><th>機率</th><th>建議與之後的機率</th></tr></thead><tbody></tbody></table></div>
+      <div class="tblwrap"><table id="slAtT"><thead><tr><th>收手那一刻的等級</th><th>機率</th><th>接下來怎麼做（建議與止損線之後的機率）</th></tr></thead><tbody></tbody></table></div>
       <div class="below" id="slBelow"></div>
       <details class="fold">
         <summary>策略解讀</summary>
         <ul class="explain" id="slExplain"></ul>
       </details>
       <details class="adv">
-        <summary>參考數據：不同止損次數 T 的比較</summary>
+        <summary>參考：提早或延後收手，結果會怎麼變</summary>
         <p class="note" id="slChartNote"></p>
         <div id="slChart" class="slchart"></div>
       </details>
