@@ -73,7 +73,8 @@ td.now{color:var(--bar);font-weight:600;font-family:var(--mono)}
 td.sum{font-weight:600;font-family:var(--mono)}
 tr.cared td{color:var(--goal);font-weight:500}
 .rulesH{font-size:.92rem;font-weight:600;margin:16px 0 0}
-.lk{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;padding:2px 8px;border:1px dashed var(--line);border-radius:6px}
+.lk{display:inline-flex;flex-direction:column;gap:6px;align-items:flex-start;padding:4px 8px;border:1px dashed var(--line);border-radius:6px}
+.lkrow{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}
 .lkon{display:inline-flex;gap:4px;align-items:center;font-size:.85rem;color:var(--fg)}
 .lk select:disabled{opacity:.45}
 @media (max-width:480px){.hhead,.hrow{grid-template-columns:3em 1fr 4.6em 4.6em;gap:5px}.val{font-size:.66rem}th,td{padding:5px 5px}table{font-size:.78rem}.goals{grid-template-columns:1fr}}
@@ -136,7 +137,7 @@ header .fold.rules{margin-top:10px}
         <li>防具：選 1～3 項技能，可設定每項至少多少、所選技能總和至少多少，所有條件要同時達成。武器：設定古代技能總和至少多少。</li>
         <li>「選擇」：重抽全部條數後，可在新舊兩組結果中二選一。單獨使用時，達成機率和「隨機」相同，只是多消耗機械零件。</li>
         <li>「隨機＋鎖定」：先用隨機重置；抽到有用的條時，鎖住數值最高的那條（骨龍最多 1 條、金龍最多 2 條），但只在鎖住後目標仍可能達成時才鎖；鎖住後不解鎖，之後每次重置依鎖定條數付費。</li>
-        <li>「隨機＋鎖定」時，如果裝備上已經有鎖住的條，可以在對應的目標旁勾選「已鎖住」並選數值（金龍另選上排或第四條），從這個狀態開始計算；金龍只鎖 1 條時，之後仍依策略自動鎖第 2 條。</li>
+        <li>「隨機＋鎖定」時，如果裝備上已經有鎖住的條，可以在對應的目標旁勾選「已鎖住」並選數值（金龍另選上排或第四條；同一項技能鎖了 2 條時，勾選「再 1 條」），從這個狀態開始計算；金龍只鎖 1 條時，之後仍依策略自動鎖第 2 條。</li>
         <li>拖動拉桿，查看重置 n 次內至少達成一次目標的機率。</li>
         <li>止損就是「見好就收」：使用情境選「以目前裝備為基準的風險評估」時，可以輸入目前的數值。前面照常重抽；快沒次數的時候，只要抽到不比保底差的結果就停下來，免得最後換成比原本還差的屬性。代價是抽到目標的機會會少一點，所以要在「少抽爛」和「多抽中」之間取捨。</li>
       </ol>
@@ -162,13 +163,13 @@ header .fold.rules{margin-top:10px}
     </div>
     <div id="armorGoals" class="goals">
       <span class="lab" style="grid-column:1/-1;font-weight:600;color:var(--fg)">目標（希望重抽達到的數值）</span>
-      <span class="lab">技能 1</span><div class="g"><select id="sk0" autocomplete="off"></select><label for="min0">目標至少</label><input type="number" id="min0" autocomplete="off" min="0" step="20" placeholder="不限"><span class="lk" id="lkw0" hidden><label class="lkon"><input type="checkbox" id="lk0" autocomplete="off">已鎖住</label><select id="lkp0" autocomplete="off" aria-label="鎖住的位置"></select><select id="lkt0" autocomplete="off" aria-label="鎖住的數值"></select></span></div>
-      <span class="lab">技能 2</span><div class="g"><select id="sk1" autocomplete="off"></select><label for="min1">目標至少</label><input type="number" id="min1" autocomplete="off" min="0" step="20" placeholder="不限"><span class="lk" id="lkw1" hidden><label class="lkon"><input type="checkbox" id="lk1" autocomplete="off">已鎖住</label><select id="lkp1" autocomplete="off" aria-label="鎖住的位置"></select><select id="lkt1" autocomplete="off" aria-label="鎖住的數值"></select></span></div>
-      <span class="lab">技能 3</span><div class="g"><select id="sk2" autocomplete="off"></select><label for="min2">目標至少</label><input type="number" id="min2" autocomplete="off" min="0" step="20" placeholder="不限"><span class="lk" id="lkw2" hidden><label class="lkon"><input type="checkbox" id="lk2" autocomplete="off">已鎖住</label><select id="lkp2" autocomplete="off" aria-label="鎖住的位置"></select><select id="lkt2" autocomplete="off" aria-label="鎖住的數值"></select></span></div>
+      <span class="lab">技能 1</span><div class="g"><select id="sk0" autocomplete="off"></select><label for="min0">目標至少</label><input type="number" id="min0" autocomplete="off" min="0" step="20" placeholder="不限"><span class="lk" id="lkw0" hidden><span class="lkrow"><label class="lkon"><input type="checkbox" id="lk0" autocomplete="off">已鎖住</label><select id="lkp0" autocomplete="off" aria-label="鎖住的位置"></select><select id="lkt0" autocomplete="off" aria-label="鎖住的數值"></select></span><span class="lkrow" id="lkr0b" hidden><label class="lkon"><input type="checkbox" id="lk0b" autocomplete="off">再 1 條</label><select id="lkp0b" autocomplete="off" aria-label="第 2 條鎖住的位置"></select><select id="lkt0b" autocomplete="off" aria-label="第 2 條鎖住的數值"></select></span></span></div>
+      <span class="lab">技能 2</span><div class="g"><select id="sk1" autocomplete="off"></select><label for="min1">目標至少</label><input type="number" id="min1" autocomplete="off" min="0" step="20" placeholder="不限"><span class="lk" id="lkw1" hidden><span class="lkrow"><label class="lkon"><input type="checkbox" id="lk1" autocomplete="off">已鎖住</label><select id="lkp1" autocomplete="off" aria-label="鎖住的位置"></select><select id="lkt1" autocomplete="off" aria-label="鎖住的數值"></select></span><span class="lkrow" id="lkr1b" hidden><label class="lkon"><input type="checkbox" id="lk1b" autocomplete="off">再 1 條</label><select id="lkp1b" autocomplete="off" aria-label="第 2 條鎖住的位置"></select><select id="lkt1b" autocomplete="off" aria-label="第 2 條鎖住的數值"></select></span></span></div>
+      <span class="lab">技能 3</span><div class="g"><select id="sk2" autocomplete="off"></select><label for="min2">目標至少</label><input type="number" id="min2" autocomplete="off" min="0" step="20" placeholder="不限"><span class="lk" id="lkw2" hidden><span class="lkrow"><label class="lkon"><input type="checkbox" id="lk2" autocomplete="off">已鎖住</label><select id="lkp2" autocomplete="off" aria-label="鎖住的位置"></select><select id="lkt2" autocomplete="off" aria-label="鎖住的數值"></select></span><span class="lkrow" id="lkr2b" hidden><label class="lkon"><input type="checkbox" id="lk2b" autocomplete="off">再 1 條</label><select id="lkp2b" autocomplete="off" aria-label="第 2 條鎖住的位置"></select><select id="lkt2b" autocomplete="off" aria-label="第 2 條鎖住的數值"></select></span></span></div>
       <span class="lab">總和</span><div class="g"><label for="tot">目標：所選技能總和至少</label><input type="number" id="tot" autocomplete="off" min="0" step="20" placeholder="不限"></div>
     </div>
     <div id="weaponGoals" class="row" hidden>
-      <span class="pair"><label for="wmin">目標：古代技能總和至少</label><select id="wmin" autocomplete="off"></select></span><span class="lk" id="lkwW" hidden><label class="lkon"><input type="checkbox" id="lkW" autocomplete="off">已鎖住</label><select id="lkpW" autocomplete="off" aria-label="鎖住的位置"></select><select id="lktW" autocomplete="off" aria-label="鎖住的數值"></select></span>
+      <span class="pair"><label for="wmin">目標：古代技能總和至少</label><select id="wmin" autocomplete="off"></select></span><span class="lk" id="lkwW" hidden><span class="lkrow"><label class="lkon"><input type="checkbox" id="lkW" autocomplete="off">已鎖住</label><select id="lkpW" autocomplete="off" aria-label="鎖住的位置"></select><select id="lktW" autocomplete="off" aria-label="鎖住的數值"></select></span><span class="lkrow" id="lkrWb" hidden><label class="lkon"><input type="checkbox" id="lkWb" autocomplete="off">再 1 條</label><select id="lkpWb" autocomplete="off" aria-label="第 2 條鎖住的位置"></select><select id="lktWb" autocomplete="off" aria-label="第 2 條鎖住的數值"></select></span></span>
     </div>
     <p class="hint" id="goalHint"></p>
     <p class="hint" id="lockHint" hidden></p>
@@ -289,7 +290,7 @@ const NL=5000;   // 鎖定策略逐次推算的上限
 const NMAX=10000000;
 const $=id=>document.getElementById(id);
 let cur={equip:"bone",part:"armor",sk:["主力技能",null,null],min:[200,null,null],tot:null,wmin:400,n:0,scene:"goal",cv:[null,null,null],cvw:null,base:null,strat:"random",
-  lk:[0,1,2].map(()=>({on:false,tier:3,pos:"0"})), lkw:{on:false,tier:3,pos:"0"}};   // lk：各目標技能「已鎖住」的條；lkw：武器的古代
+  lk:[0,1,2].map(()=>[0,1].map(()=>({on:false,tier:3,pos:"0"}))), lkw:[0,1].map(()=>({on:false,tier:3,pos:"0"}))};   // lk：各目標技能「已鎖住」的條（金龍同一項技能最多可鎖 2 條）；lkw：武器的古代
 
 // ===== 計算：列舉所有條的組合（每條 = 沒抽到關心的技能，或 某項技能 × 某階級）=====
 // 回傳單次重置的 {總和: 機率} 分布，以及達成目標的機率
@@ -400,14 +401,16 @@ function lockChain(c){
   return lockCache[ck]={feasible:true,E3,E,doneAt,cumT,q50,q90,q99,converged:1-doneAt[NL]<1e-12,states:S,custom:start.length>0};
 }
 // 起始鎖定 → [{f: 0 上排 / 1 第四條, i: 第幾項關心的技能, v: 數值}]（來自目標旁的「已鎖住」勾選框）
-function lockSlots(c){   // 目前畫面上可勾選的目標：[{i, sk, L}]
-  if(c.part==="weapon") return [{i:0,sk:"古代",L:c.lkw}];
-  return c.sk.map((sk,i)=>sk?{i:c.sk.filter(Boolean).indexOf(sk),sk,L:c.lk[i]}:null).filter(Boolean);
+function lockSlots(c){   // 目前畫面上可勾選的目標：[{j, i, sk, Ls}]，Ls 為這個目標的 2 列鎖定設定
+  if(c.part==="weapon") return [{j:"W",i:0,sk:"古代",Ls:c.lkw}];
+  return c.sk.map((sk,k)=>sk?{j:String(k),i:c.sk.filter(Boolean).indexOf(sk),sk,Ls:c.lk[k]}:null).filter(Boolean);
 }
 function startLocks(c){
   if(c.strat!=="lock") return [];
-  const gold=c.equip==="gold";
-  return lockSlots(c).filter(o=>o.L.on).map(o=>{ const f=(gold&&o.L.pos==="1")?1:0; return {f,i:o.i,v:VALS[c.part][o.sk][f][o.L.tier]}; });
+  const gold=c.equip==="gold", out=[];
+  lockSlots(c).forEach(o=>o.Ls.forEach((L,k)=>{ if(!L.on||(k===1&&!gold)) return;
+    const f=(gold&&L.pos==="1")?1:0; out.push({f,i:o.i,v:VALS[c.part][o.sk][f][L.tier]}); }));
+  return out;
 }
 
 // ===== 畫面 =====
@@ -502,7 +505,7 @@ function render(){
   const lh=$("lockHint"), sl=startLocks(cur);
   lh.hidden = st!=="lock";
   if(st==="lock"){
-    const mx=cur.equip==="gold"?"金龍最多鎖 2 條（第四條最多 1 條）":"骨龍最多鎖 1 條";
+    const mx=cur.equip==="gold"?"金龍最多鎖 2 條，第四條最多 1 條；同一項技能鎖了 2 條時，勾選「再 1 條」":"骨龍最多鎖 1 條";
     lh.className="hint"+((impossible&&sl.length)?" bad":"");
     lh.textContent = !sl.length ? "裝備上如果已經有鎖住的條，請在對應的目標旁勾選「已鎖住」並選數值（"+mx+"）。沒有勾選就從全部未鎖開始算。" :
       already ? "鎖住的條已經達成目標，不需要再重置。" :
@@ -535,23 +538,28 @@ function renderCompare(noGoal,impossible,p,C){
 }
 function fillLockSelects(){
   const gold=cur.equip==="gold", maxLock=gold?2:1, show=cur.strat==="lock";
-  const ids=cur.part==="weapon"?["W"]:["0","1","2"];
   ["0","1","2","W"].forEach(j=>{ $("lkw"+j).hidden=true; });
-  if(!gold){ cur.lk.forEach(L=>L.pos="0"); cur.lkw.pos="0"; }
+  const all=[...cur.lk.flat(),...cur.lkw];
+  if(!gold){ all.forEach(L=>L.pos="0"); cur.lk.forEach(Ls=>Ls[1].on=false); cur.lkw[1].on=false; }
+  if(cur.part==="armor") cur.lk.forEach((Ls,k)=>{ if(!cur.sk[k]) Ls.forEach(L=>L.on=false); });
   const slots=lockSlots(cur);
-  if(cur.part==="armor") cur.lk.forEach((L,i)=>{ if(!cur.sk[i]) L.on=false; });
+  slots.forEach(o=>{ if(!o.Ls[0].on&&o.Ls[1].on){ o.Ls[0]={...o.Ls[1]}; o.Ls[1].on=false; } });   // 第 2 列只在第 1 列勾選時使用
+  if(cur.part==="armor") slots.forEach(o=>cur.lk[+o.j]=o.Ls); else cur.lkw=slots[0].Ls;
   // 超過上限時，從後面的勾選取消；第四條只有 1 條
   let n=0, four=0;
-  slots.forEach(o=>{ if(!o.L.on) return; if(n>=maxLock){ o.L.on=false; return; } if(o.L.pos==="1"){ if(four){ o.L.pos="0"; } else four=1; } n++; });
-  slots.forEach((o,k)=>{
-    const j=cur.part==="weapon"?"W":String(cur.sk.indexOf(o.sk));
-    const box=$("lkw"+j); box.hidden=!show;
-    const cb=$("lk"+j); cb.checked=o.L.on; cb.disabled=!o.L.on && n>=maxLock;
-    const lp=$("lkp"+j); lp.innerHTML=""; lp.add(new Option("上排","0")); const of=new Option("第四條","1"); of.disabled=!!four&&o.L.pos!=="1"; lp.add(of);
-    lp.value=o.L.pos; lp.hidden=!gold; lp.disabled=!o.L.on;
-    const lt=$("lkt"+j); lt.innerHTML=""; const f=o.L.pos==="1"?1:0;
-    for(let t=0;t<5;t++) lt.add(new Option((t+1)+" 級（"+VALS[cur.part][o.sk][f][t]+"）",String(t)));
-    lt.value=String(o.L.tier); lt.disabled=!o.L.on;
+  slots.forEach(o=>o.Ls.forEach(L=>{ if(!L.on) return; if(n>=maxLock){ L.on=false; return; } if(L.pos==="1"){ if(four) L.pos="0"; else four=1; } n++; }));
+  slots.forEach(o=>{
+    $("lkw"+o.j).hidden=!show;
+    o.Ls.forEach((L,k)=>{
+      const sfx=k?"b":"";
+      if(k===1) $("lkr"+o.j+"b").hidden = !(gold && o.Ls[0].on);
+      const cb=$("lk"+o.j+sfx); cb.checked=L.on; cb.disabled=!L.on && n>=maxLock;
+      const lp=$("lkp"+o.j+sfx); lp.innerHTML=""; lp.add(new Option("上排","0")); const of=new Option("第四條","1"); of.disabled=!!four&&L.pos!=="1"; lp.add(of);
+      lp.value=L.pos; lp.hidden=!gold; lp.disabled=!L.on;
+      const lt=$("lkt"+o.j+sfx); lt.innerHTML=""; const f=L.pos==="1"?1:0;
+      for(let t=0;t<5;t++) lt.add(new Option((t+1)+" 級（"+VALS[cur.part][o.sk][f][t]+"）",String(t)));
+      lt.value=String(L.tier); lt.disabled=!L.on;
+    });
   });
 }
 function renderCostTable(){
@@ -717,7 +725,7 @@ for(let i=0;i<3;i++){
   $("sk"+i).addEventListener("change",e=>{
     cur.sk[i]=e.target.value||null; if(i===0&&!cur.sk[0]) cur.sk[0]=SKILLS.find(s=>!cur.sk.includes(s));
     if(!cur.sk[i]) cur.min[i]=null;
-    cur.cv[i]=null; $("cv"+i).value=""; cur.lk[i].on=false;
+    cur.cv[i]=null; $("cv"+i).value=""; cur.lk[i].forEach(L=>L.on=false);
     fillSkillSelects(); renderTables(); fillLockSelects(); render();
   });
   $("min"+i).addEventListener("input",e=>{ cur.min[i]=readNum(e.target.value); render(); });
@@ -732,12 +740,12 @@ $("cvw").addEventListener("input",e=>{ cur.cvw=readNum(e.target.value); render()
 $("base").addEventListener("input",e=>{ cur.base=readNum(e.target.value); render(); });
 $("slMode").addEventListener("change",render); $("slRisk").addEventListener("input",render); $("slT").addEventListener("input",render);
 $("strat").addEventListener("change",e=>{ cur.strat=e.target.value; fillLockSelects(); render(); });
-const lkOf=j=>j==="W"?cur.lkw:cur.lk[+j];
-["0","1","2","W"].forEach(j=>{
-  $("lk"+j).addEventListener("change",e=>{ lkOf(j).on=e.target.checked; fillLockSelects(); render(); });
-  $("lkt"+j).addEventListener("change",e=>{ lkOf(j).tier=+e.target.value; fillLockSelects(); render(); });
-  $("lkp"+j).addEventListener("change",e=>{ lkOf(j).pos=e.target.value; fillLockSelects(); render(); });
-});
+const lkOf=(j,k)=>(j==="W"?cur.lkw:cur.lk[+j])[k];
+["0","1","2","W"].forEach(j=>[0,1].forEach(k=>{ const sfx=k?"b":"";
+  $("lk"+j+sfx).addEventListener("change",e=>{ lkOf(j,k).on=e.target.checked; fillLockSelects(); render(); });
+  $("lkt"+j+sfx).addEventListener("change",e=>{ lkOf(j,k).tier=+e.target.value; fillLockSelects(); render(); });
+  $("lkp"+j+sfx).addEventListener("change",e=>{ lkOf(j,k).pos=e.target.value; fillLockSelects(); render(); });
+}));
 $("slider").addEventListener("input",e=>setN(e.target.value));
 $("nInput").addEventListener("input",e=>{ if(!e.isComposing) setN(e.target.value,true); });
 $("nInput").addEventListener("compositionend",e=>setN(e.target.value,true));
