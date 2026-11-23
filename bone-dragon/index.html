@@ -117,6 +117,8 @@ header .fold.rules{margin-top:10px}
 .stop .mats table td:first-child{white-space:normal;min-width:4.5em;font-family:var(--sans)}
 .stop .mats table td:not(:first-child){white-space:nowrap;font-family:var(--mono)}
 @media (max-width:480px){.stop .mats table{font-size:.74rem}.stop .mats th,.stop .mats td{padding:5px 4px}}
+.count{margin:-8px 0 14px;line-height:1.6}
+.count b{font-weight:600}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 .stop #slAtT th{white-space:normal;vertical-align:bottom}
 .stop #slAtT th:first-child{min-width:5em}
@@ -184,6 +186,7 @@ header .fold.rules{margin-top:10px}
   <section class="panel stop" id="stopPanel">
     <h2>止損策略</h2>
     <p class="verdict" id="slVerdict"></p>
+    <p class="count" id="slCount" hidden></p>
     <div class="slctl">
       <label for="slMode">止損點的決定方式</label><select id="slMode" autocomplete="off">
         <option value="r50" selected>推薦的做法（掉下去還有一半的機會爬回來，就繼續衝）</option>
@@ -496,6 +499,20 @@ function resultsAt(sl,r,stop){
   for(let k=1;k<=r;k++){ prev=G; G=stepG(G,T,S,g,s0,stop); }
   return {G,prev};
 }
+// 怎麼確認已經到第 Ts 次：骨龍看「古代龍的骨頭碎片」、金龍看「金龍的寶玉碎片」，這兩種材料每次用量固定
+function countHint(sl,Ts){
+  const BONE="古代龍的骨頭碎片", GOLD="金龍的寶玉碎片", per={bone:new Set(),gold:new Set()};
+  sl.states.forEach((st,i)=>{ if(i===sl.g) return; const {eq,lv}=parse(st);
+    const m=eq==="bone"?BONE:GOLD, arr=EQ[eq].mat[cur.part][m]; per[eq].add(arr?arr[lv+1]:0); });
+  if(per.bone.size>1||per.gold.size>1||[...per.bone,...per.gold].some(x=>!x)) return "怎麼知道到第 "+Ts+" 次了：請自己記下強化的次數。";
+  const b=[...per.bone][0], g=[...per.gold][0], evo=parse(cur.start).eq==="bone"&&parse(cur.target).eq==="gold";
+  if(!g) return "怎麼知道到第 "+Ts+" 次了：從開始強化起算，用掉 <b>"+(Ts*b).toLocaleString("en-US")+" 個"+BONE+"</b>（每次 "+b+" 個），就是第 "+Ts+" 次。";
+  if(!b&&!evo) return "怎麼知道到第 "+Ts+" 次了：從開始強化起算，用掉 <b>"+(Ts*g).toLocaleString("en-US")+" 個"+GOLD+"</b>（每次 "+g+" 個），就是第 "+Ts+" 次。";
+  const ev=EVOLVE[GOLD]||0;
+  return "怎麼知道到第 "+Ts+" 次了：從開始強化起算，"+(b
+    ? "把用掉的"+BONE+"除以 "+b+"；如果已經進化，再加上用掉的"+GOLD+"扣掉進化用的 "+ev+" 個後除以 "+g+"。加起來是 <b>"+Ts+"</b>"
+    : "把用掉的"+GOLD+"扣掉進化用的 "+ev+" 個後除以 "+g+"，得到 <b>"+Ts+"</b>")+"，就是第 "+Ts+" 次。";
+}
 // 照止損規則（第 Ts 次後停在起點就收手）用完 n 次時，平均用掉的強化次數與各材料；Ts = n 即不止損
 function stopMats(sl,Ts){
   const {S,g,s0,T,n,states}=sl, MK=MAT_ORDER.length, cost=MAT_ORDER.map(()=>new Float64Array(S));
@@ -533,7 +550,7 @@ const pp=x=>Math.abs(x*100).toFixed(1)+" 個百分點";
 function renderStop(){
   const n=cur.n, mode=$("slMode").value;
   $("slRiskWrap").hidden=mode!=="risk"; $("slTWrap").hidden=mode!=="custom";
-  const V=$("slVerdict"), body=$("slBody");
+  const V=$("slVerdict"), body=$("slBody"); $("slCount").hidden=true;
   if(n===0){ V.className="verdict"; V.textContent="請先用上方的拉桿設定強化次數 n（你準備好的強化材料可以強化幾次）。"; body.hidden=true; return; }
   const sl=stopLoss(cur,n);
   if(sl.na){ V.className="verdict"; V.textContent=sl.na; body.hidden=true; return; }
@@ -558,6 +575,7 @@ function renderStop(){
       ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次強化，之後只要停在 "+S+" 就收手；如果那時還在 "+S+" 以下，就繼續強化，爬回 "+S+" 再收手。"
       : (mode==="r50" ? "建議：" : "自訂：")+"前 "+Ts+" 次照常強化。第 "+Ts+" 次以後，只要回到 "+S+"，就停下來。";
   }
+  const C=$("slCount"); C.hidden=!(Ts>0&&Ts<n); if(!C.hidden) C.innerHTML=countHint(sl,Ts);
   const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
     [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
     '</div><div class="nums">到達 '+pc(a[0])+'・維持 '+pc(a[1])+'・倒退 '+pc(a[2])+'</div></div>';
