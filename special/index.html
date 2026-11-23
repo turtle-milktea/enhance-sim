@@ -9,15 +9,15 @@
 /* Layout: single column instrument panel — equipment & goal settings, distribution chart, reroll slider, stats, materials, rule tables */
 :root{
   --bg:#f5f6f9; --panel:#ffffff; --fg:#1b2030; --muted:#636a80; --line:#dde1ea; --track:#eef0f5;
-  --bar:#4a63c9; --goal:#d98a1c; --bad:#c0483c;
+  --bar:#4a63c9; --goal:#d98a1c; --bad:#c0483c; --keep:#6f86c9;
   --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
-  --bar:#7d93ee; --goal:#f0a640; --bad:#e9786b; color-scheme:dark}}
+  --bar:#7d93ee; --goal:#f0a640; --bad:#e9786b; --keep:#5b6fb4; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
-  --bar:#7d93ee; --goal:#f0a640; --bad:#e9786b; color-scheme:dark}
+  --bar:#7d93ee; --goal:#f0a640; --bad:#e9786b; --keep:#5b6fb4; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
 .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
@@ -74,6 +74,37 @@ td.sum{font-weight:600;font-family:var(--mono)}
 tr.cared td{color:var(--goal);font-weight:500}
 .rulesH{font-size:.92rem;font-weight:600;margin:16px 0 0}
 @media (max-width:480px){.hhead,.hrow{grid-template-columns:3em 1fr 4.6em 4.6em;gap:5px}.val{font-size:.66rem}th,td{padding:5px 5px}table{font-size:.78rem}.goals{grid-template-columns:1fr}}
+.stop h2{font-size:1.05rem;margin:0 0 10px}
+.stop h3{font-size:.92rem;margin:18px 0 0}
+.slctl{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.slctl select{max-width:100%;width:100%}
+.stop table td{white-space:normal;vertical-align:top;line-height:1.6}
+.stop table td:first-child,.stop table td:nth-child(2){white-space:nowrap;font-family:var(--mono)}
+.verdict{font-size:1.05rem;font-weight:600;margin:14px 0 10px;line-height:1.6}
+.verdict.warn{color:var(--bad)}
+.sbars{display:flex;flex-direction:column;gap:12px}
+.sbar .cap{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.sbar .stack{display:flex;height:26px;border-radius:5px;overflow:hidden;background:var(--line)}
+.sbar .seg{height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.75rem;color:#fff;white-space:nowrap;overflow:hidden}
+.seg.up,.sw.up{background:var(--goal)} .seg.keep,.sw.keep{background:var(--keep)} .seg.down,.sw.down{background:var(--bad)}
+.sbar .nums{font-family:var(--mono);font-size:.78rem;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8rem;color:var(--muted);margin-top:10px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.explain{font-size:.9rem;line-height:1.75;margin:8px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px}
+.below{font-size:.9rem;line-height:1.75;margin-top:10px}
+.below ul{margin:4px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px}
+.below p{margin:0}
+.stop table tr.basis td{background:color-mix(in srgb,var(--goal) 10%,transparent)}
+.tag{font-weight:700}
+.adv{margin-top:16px}
+.adv summary{cursor:pointer;font-weight:500}
+.slchart svg{width:100%;height:auto;display:block;margin-top:8px}
+.slchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.stop table td:last-child,.stop table th:last-child{text-align:left}
+.stop table td:first-child{white-space:nowrap}
+.riskin{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center;padding:12px;border:1px dashed var(--line);border-radius:8px}
+.riskin input[type=number]{width:6.5em}
+@media (max-width:480px){.riskin{grid-template-columns:1fr}}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -89,6 +120,7 @@ tr.cared td{color:var(--goal);font-weight:500}
       <li>每次重置（隨機）都會重新抽出全部條數。消耗：骨龍防具為時間之沙 × 1 + 1,000 金幣，骨龍武器為時間之沙 × 1 + 2,000 金幣（時間之沙可用方舟的時間之沙代替）；金龍防具、武器皆為金龍的寶玉碎片 × 3 + 1,000 金幣。</li>
       <li>防具：選 1～3 項技能，可設定每項至少多少、所選技能總和至少多少，所有條件要同時達成。武器：設定古代技能總和至少多少。</li>
       <li>拖動拉桿，查看重置 n 次內至少達成一次目標的機率。</li>
+      <li>使用情境選「以目前裝備為基準的風險評估」時，可輸入目前的數值，計算止損策略：前 T 次重抽只在達成目標時停止；第 T 次之後，只要抽到不低於保底的結果就收手，避免越抽越差。</li>
     </ol>
     <p class="meta">製作日期：2026-11-22</p>
   </header>
@@ -97,6 +129,11 @@ tr.cared td{color:var(--goal);font-weight:500}
     <div class="row">
       <span class="pair"><label for="equip">裝備</label><select id="equip" autocomplete="off"><option value="bone" selected>骨龍（3 條）</option><option value="gold">金龍（3 條＋第四條）</option></select></span>
       <span class="pair"><label for="part">部位</label><select id="part" autocomplete="off"><option value="armor" selected>防具</option><option value="weapon">武器</option></select></span>
+    </div>
+    <div class="slctl">
+      <label for="scene">使用情境</label><select id="scene" autocomplete="off">
+        <option value="goal" selected>只看達成目標的機率</option>
+        <option value="risk">以目前裝備為基準的風險評估（止損）</option></select>
     </div>
     <div id="armorGoals" class="goals">
       <span class="lab">技能 1</span><div class="g"><select id="sk0" autocomplete="off"></select><label for="min0">至少</label><input type="number" id="min0" autocomplete="off" min="0" step="20" placeholder="不限"></div>
@@ -108,6 +145,14 @@ tr.cared td{color:var(--goal);font-weight:500}
       <span class="pair"><label for="wmin">古代技能總和至少</label><select id="wmin" autocomplete="off"></select></span>
     </div>
     <p class="hint" id="goalHint"></p>
+    <div id="riskIn" class="riskin" hidden>
+      <span class="lab" style="grid-column:1/-1">目前裝備的數值（重抽後如果比這個差，就算倒退）</span>
+      <span class="lab" id="cl0">目前 技能 1</span><div class="g"><input type="number" id="cv0" autocomplete="off" min="0" step="20" placeholder="0"></div>
+      <span class="lab" id="cl1">目前 技能 2</span><div class="g"><input type="number" id="cv1" autocomplete="off" min="0" step="20" placeholder="0"></div>
+      <span class="lab" id="cl2">目前 技能 3</span><div class="g"><input type="number" id="cv2" autocomplete="off" min="0" step="20" placeholder="0"></div>
+      <span class="lab" id="clw">目前 古代總和</span><div class="g"><input type="number" id="cvw" autocomplete="off" min="0" step="25" placeholder="0"></div>
+      <span class="lab">保底水準</span><div class="g"><label for="base">總和至少</label><input type="number" id="base" autocomplete="off" min="0" step="20"><span class="hint" id="baseHint"></span></div>
+    </div>
   </section>
 
   <section class="panel">
@@ -133,6 +178,33 @@ tr.cared td{color:var(--goal);font-weight:500}
     <div class="stat"><div class="k">50% 機率達成所需次數</div><div class="v" id="sQ50"></div></div>
     <div class="stat"><div class="k">90% 機率達成所需次數</div><div class="v" id="sQ90"></div></div>
     <div class="stat"><div class="k">99% 機率達成所需次數</div><div class="v" id="sQ99"></div></div>
+  </section>
+
+  <section class="panel stop" id="stopPanel" hidden>
+    <h2>止損策略</h2>
+    <div class="slctl">
+      <label for="slMode">止損點的決定方式</label><select id="slMode" autocomplete="off">
+        <option value="r50" selected>建議（抽爛時，剩餘次數有 50% 機率抽回保底以上）</option>
+        <option value="risk">指定可接受的倒退機率</option>
+        <option value="custom">自訂止損次數 T</option></select>
+      <span class="pair" id="slRiskWrap" hidden><label for="slRisk">可接受的倒退機率</label><input type="number" id="slRisk" autocomplete="off" min="0" max="100" step="1" value="10"><span class="lab">%</span></span>
+      <span class="pair" id="slTWrap" hidden><label for="slT">止損次數 T</label><input type="number" id="slT" autocomplete="off" min="0" max="10000000" step="1" value="0"></span>
+    </div>
+    <p class="verdict" id="slVerdict"></p>
+    <div id="slBody">
+      <div class="sbars" id="slBars"></div>
+      <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於保底、未達目標）</span><span><i class="sw down"></i>倒退（低於保底）</span></div>
+      <h3 id="slAtTH"></h3>
+      <div class="tblwrap"><table id="slAtT"><thead><tr><th>第 T 次的結果</th><th>機率</th><th>建議與之後的機率</th></tr></thead><tbody></tbody></table></div>
+      <div class="below" id="slBelow"></div>
+      <h3>策略解讀</h3>
+      <ul class="explain" id="slExplain"></ul>
+      <details class="adv">
+        <summary>參考數據：不同止損次數 T 的比較</summary>
+        <p class="note">怎麼看這張圖：橫軸是止損次數 T（第 T 次之後，只要抽到不低於保底的結果就收手），縱軸是用完預算後的結果機率。橘線是「到達目標」，紅線是「倒退」。T 越往右越積極，到達目標的機會增加，但倒退的風險也增加；T 越往左越保守。藍色直線是目前採用的 T，虛線是預設建議的 T。可以用這張圖看「多冒一點倒退風險，能換到多少到達機率」。</p>
+        <div id="slChart" class="slchart"></div>
+      </details>
+    </div>
   </section>
 
   <section class="panel">
@@ -172,7 +244,7 @@ const COSTS={
   gold:{armor:{"金龍的寶玉碎片":3,"金幣":1000}, weapon:{"金龍的寶玉碎片":3,"金幣":1000}}};
 const NMAX=10000000;
 const $=id=>document.getElementById(id);
-let cur={equip:"bone",part:"armor",sk:["主力技能",null,null],min:[200,null,null],tot:null,wmin:400,n:0};
+let cur={equip:"bone",part:"armor",sk:["主力技能",null,null],min:[200,null,null],tot:null,wmin:400,n:0,scene:"goal",cv:[null,null,null],cvw:null,base:null};
 
 // ===== 計算：列舉所有條的組合（每條 = 沒抽到關心的技能，或 某項技能 × 某階級）=====
 // 回傳單次重置的 {總和: 機率} 分布，以及達成目標的機率
@@ -263,6 +335,7 @@ function render(){
   tb.tHead.innerHTML="<tr><th>材料</th><th>到第 "+n.toLocaleString("en-US")+" 次為止</th><th>達成目標</th></tr>";
   tb.tBodies[0].innerHTML='<tr><td>重置次數</td><td class="now">'+fmt(usedN)+'</td><td class="sum">'+(noGoal?"—":p>0?fmt(1/p):"無法達成")+"</td></tr>"+
     Object.entries(COSTS[cur.equip][cur.part]).map(([m,q])=>'<tr><td>'+m+'</td><td class="now">'+fmt(usedN*q)+'</td><td class="sum">'+(noGoal?"—":p>0?fmt(q/p):"無法達成")+"</td></tr>").join("");
+  renderRisk(noGoal);
 }
 function renderTables(){
   const cared=new Set(cur.part==="armor"?cur.sk.filter(Boolean):["古代"]);
@@ -276,6 +349,116 @@ function renderTables(){
     t.innerHTML=h+"</tbody>";
   }
 }
+
+// ===== 風險評估（止損）：每次重抽的結果分成 目標 g、不低於保底 k、低於保底 d，彼此獨立 =====
+function riskProbs(c,base){
+  const lines=c.equip==="gold"?4:3, g=goalOf2(c), k=g.cared.length;
+  const lineOut=li=>{ const f=li<3?0:1, out=[[-1,0,1-0.1*k]]; g.cared.forEach((sk,i)=>TIER.forEach((t,j)=>out.push([i,VALS[c.part][sk][f][j],0.1*t]))); return out; };
+  const L=Array.from({length:lines},(_,li)=>lineOut(li)), s=new Array(k).fill(0); let pg=0,pk=0,pd=0;
+  (function rec(li,q){
+    if(li===lines){ const sum=s.reduce((a,b)=>a+b,0);
+      if(g.ok(s)) pg+=q; else if(sum>=base) pk+=q; else pd+=q; return; }
+    for(const [i,v,p] of L[li]){ if(i>=0) s[i]+=v; rec(li+1,q*p); if(i>=0) s[i]-=v; }
+  })(0,1);
+  return {pg,pk,pd};
+}
+function goalOf2(c){
+  if(c.part==="armor"){ const cared=c.sk.filter(Boolean), mins=c.sk.map((x,i)=>x?c.min[i]:undefined).filter(x=>x!==undefined), tot=c.tot;
+    return {cared,ok:s=>mins.every((m,i)=>m==null||s[i]>=m)&&(tot==null||s.reduce((a,b)=>a+b,0)>=tot)}; }
+  return {cared:["古代"],ok:s=>s[0]>=c.wmin};
+}
+// 止損次數 T 的結果（n 次預算）：[到達, 維持, 倒退, 平均重抽次數]
+function riskOutcome(P,n,T){
+  const {pg,pk,pd}=P, a=1-pg;
+  if(T<=0) return [0,1,0,0];
+  const aT1=Math.pow(a,T-1), down=aT1*Math.pow(pd,n-T+1);
+  const up = 1-aT1 + (pd<1 ? aT1*pg*(1-Math.pow(pd,n-T+1))/(1-pd) : 0);
+  const used = (pg>0 ? (1-Math.pow(a,T))/pg : T) + (pd<1 ? aT1*pd*(1-Math.pow(pd,n-T))/(1-pd) : aT1*(n-T));
+  return [up,Math.max(0,1-up-down),down,used];
+}
+function renderRisk(noGoal){
+  const on=cur.scene==="risk", armor=cur.part==="armor";
+  $("riskIn").hidden=!on; $("stopPanel").hidden=!on; if(!on) return;
+  // 目前數值的欄位
+  const cared=armor?cur.sk.filter(Boolean):["古代"];
+  for(let i=0;i<3;i++){ const show=armor&&!!cur.sk[i]; $("cl"+i).hidden=!show; $("cv"+i).parentElement.hidden=!show; if(show) $("cl"+i).textContent="目前 "+cur.sk[i]; }
+  $("clw").hidden=armor; $("cvw").parentElement.hidden=armor;
+  const curVals=armor?cur.sk.map((x,i)=>x?(cur.cv[i]||0):null).filter(x=>x!==null):[cur.cvw||0];
+  const curTot=curVals.reduce((a,b)=>a+b,0), base=cur.base!=null?cur.base:curTot;
+  $("baseHint").textContent= cur.base!=null ? "（自訂；目前總和 "+curTot+"）" : "（預設 = 目前總和 "+curTot+"）";
+  $("base").placeholder=String(curTot);
+  const mode=$("slMode").value; $("slRiskWrap").hidden=mode!=="risk"; $("slTWrap").hidden=mode!=="custom";
+  const V=$("slVerdict"), body=$("slBody"), n=cur.n;
+  const say=(t,warn)=>{ V.className="verdict"+(warn?" warn":""); V.textContent=t; body.hidden=true; };
+  if(noGoal) return say("請先在上方設定目標。");
+  const g=goalOf2(cur);
+  if(g.ok(armor?cur.sk.filter(Boolean).map((x,i)=>cur.cv[cur.sk.indexOf(x)]||0):[cur.cvw||0])) return say("目前的數值已經達成目標，不需要重抽。");
+  if(n===0) return say("請先用上方的拉桿設定重置次數 n（你準備好的材料可以重抽幾次）。");
+  const P=riskProbs(cur,base);
+  if(P.pg===0) return say("目標無法達成。",true);
+  if(P.pd<=0) return say("每次重抽都不會低於保底（總和 "+base+"），不會倒退，不需要止損。");
+  body.hidden=false;
+  const q=P.pg+P.pk, r50 = q>=1 ? 1 : Math.ceil(Math.log(0.5)/Math.log(1-q)), T50=Math.max(0,n-r50);
+  let Ts;
+  if(mode==="r50") Ts=T50;
+  else if(mode==="risk"){ const x=Math.max(0,Math.min(100,+$("slRisk").value||0))/100; let lo=0,hi=n; while(lo<hi){ const mid=Math.ceil((lo+hi)/2); if(riskOutcome(P,n,mid)[2]<=x+1e-12) lo=mid; else hi=mid-1; } Ts=lo; }
+  else Ts=Math.max(0,Math.min(n,Math.round(+$("slT").value||0)));
+  const base3=riskOutcome(P,n,n), st=riskOutcome(P,n,Ts);
+  const B="總和 "+base, G="目標";
+  if(Ts===0) say(mode==="r50" ? "不建議重抽：一旦抽到比保底差的結果，要 "+r50+" 次才有 50% 的機會抽回保底以上，但預算只有 "+n+" 次。" : "止損次數 T = 0：等於不重抽，維持目前的數值。", true), body.hidden=false;
+  else if(Ts>=n){ V.className="verdict"; V.textContent="T = "+n+"：等於不止損，用完全部 "+n+" 次。"; }
+  else { V.className="verdict"; V.textContent = mode==="risk"
+      ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次重抽，之後只要抽到不低於保底（"+B+"）的結果就收手；如果那時的結果比保底差，就繼續重抽，抽到保底以上再收手。"
+      : (mode==="r50"?"建議：":"自訂：")+"重抽到第 "+Ts+" 次後，只要抽到不低於保底（"+B+"）的結果就收手。"; }
+  const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
+    [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
+    '</div><div class="nums">到達 '+pc(a[0])+'・維持 '+pc(a[1])+'・倒退 '+pc(a[2])+'</div></div>';
+  $("slBars").innerHTML=bar("用完 "+n+" 次（不止損）",base3)+(Ts<n?bar(Ts===0?"不重抽（T = 0）":"第 "+Ts+" 次後止損",st):"");
+  // 第 T 次的結果
+  const r=n-Ts, a=1-P.pg, C=COSTS[cur.equip][cur.part];
+  $("slAtTH").textContent="第 "+Ts+" 次重抽的結果（剩下 "+r+" 次）";
+  const rows=[];
+  if(Ts>0){
+    rows.push("<tr><td>已達成目標</td><td>"+pc(1-Math.pow(a,Ts))+"</td><td>已達成目標，停止。</td></tr>");
+    rows.push("<tr><td>不低於保底</td><td>"+pc(Math.pow(a,Ts-1)*P.pk)+"</td><td>"+(Ts<n?"照策略收手。":"")+"若仍繼續用完剩下 "+r+" 次：達成目標 "+pc(1-Math.pow(a,r))+"，最後結果不低於保底 "+pc(r>0?1-Math.pow(a,r-1)*P.pd:1)+"。</td></tr>");
+    rows.push('<tr class="basis"><td>低於保底</td><td>'+pc(Math.pow(a,Ts-1)*P.pd)+'</td><td><span class="tag">抽爛了，就是這個處境。</span>繼續重抽，抽到保底以上就收手（機率見下方）。</td></tr>');
+  }
+  $("slAtT").tBodies[0].innerHTML=rows.join(""); $("slAtT").parentElement.hidden=Ts===0;
+  const back=1-Math.pow(P.pd,r), back1=1-Math.pow(P.pd,Math.max(0,r-1));
+  $("slBelow").innerHTML='<p>第 '+Ts+' 次的結果如果比保底差：</p><ul><li><span class="tag">剩下 '+r+' 次內抽回保底以上（或直接達成目標）的機率 '+pc(back)+'。</span>'+
+    (mode==="r50"&&r>=1 ? '<span class="tag">這就是止損點的依據：</span>剩 '+r+' 次時機會還有一半以上；如果再晚一次才收手（剩 '+(r-1)+' 次），就只剩 '+pc(back1)+'，不到一半。' : (r>=1?'如果剩 '+(r-1)+' 次，則為 '+pc(back1)+'。':''))+
+    '</li><li>每次重抽都是全部重新抽，和上一次的結果無關：單次抽到保底以上（含達成目標）的機率固定是 '+pc(q)+'，抽到比保底差的機率是 '+pc(P.pd)+'。</li></ul>';
+  $("slBelow").hidden = Ts>=n || Ts===0;
+  const ex=[];
+  ex.push("<li>保底水準：所選技能"+(armor?"":"（古代）")+"的總和 "+base+(cur.base!=null?"（自訂）":"（= 目前總和）")+"。比保底低就算倒退；「維持」代表最後的結果不低於保底，不一定和目前的數值完全相同。</li>");
+  ex.push("<li>不止損（用完 "+n+" 次，或中途達成目標）：達成目標 "+pc(base3[0])+"、維持 "+pc(base3[1])+"、倒退 "+pc(base3[2])+"。重抽會把目前的屬性換掉，所以抽到最後一次時，結果多半比現在差。</li>");
+  if(Ts<n&&Ts>0){
+    ex.push("<li>第 "+Ts+" 次後止損：達成目標 "+pc(st[0])+"（"+(st[0]<=base3[0]?"減少 ":"增加 ")+pp(st[0]-base3[0])+"）、維持 "+pc(st[1])+"、倒退 "+pc(st[2])+"（"+(st[2]<=base3[2]?"減少 ":"增加 ")+pp(st[2]-base3[2])+"）。</li>");
+    ex.push("<li>換句話說：放棄 "+pp(base3[0]-st[0])+" 的達成機會，換到倒退風險減少 "+pp(base3[2]-st[2])+"。</li>");
+    ex.push("<li>止損時平均實際重抽 "+fmt(st[3])+" 次（約 "+Object.entries(C).map(([m,qq])=>m+" "+fmt(st[3]*qq)).join("、")+"），剩下的材料可以留到下次。</li>");
+  }
+  if(Ts===0) ex.push("<li>T = 0 表示不重抽，維持目前的數值。若仍要重抽，請參考上方「用完 "+n+" 次」的結果。</li>");
+  ex.push("<li>預設的 T 怎麼來：抽到比保底差的結果之後，要 "+r50+" 次才有 50% 的機會抽回保底以上。所以在最後 "+r50+" 次之前（第 "+n+" − "+r50+" = "+T50+" 次後），只要抽到不低於保底的結果就收手。</li>");
+  ex.push("<li>怎麼選 T：T 越大越積極，越接近「用完全部次數」，達成目標的機會較高，但倒退的風險也較高；T 越小越保守。保底水準也可以自訂：設得越低，越容易收手。</li>");
+  ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次重抽；「自訂止損次數 T」可以直接試算任何 T。</li>");
+  $("slExplain").innerHTML=ex.join("");
+  // 參考曲線（取樣最多 400 點）
+  const step=Math.max(1,Math.ceil(n/400)), pts=[]; for(let t=0;t<=n;t+=step) pts.push(t); if(pts[pts.length-1]!==n) pts.push(n);
+  drawRiskChart(pts.map(t=>[t,riskOutcome(P,n,t)]),n,Ts,T50);
+}
+const pc=x=>(x*100).toFixed(1)+"%";
+const pp=x=>Math.abs(x*100).toFixed(1)+" 個百分點";
+function drawRiskChart(pts,n,Ts,T50){
+  const W=640,H=230,L=40,Rr=12,Tp=12,B=28, X=t=>L+(W-L-Rr)*t/Math.max(1,n), Y=p=>Tp+(H-Tp-B)*(1-p);
+  const line=c=>pts.map(([t,o],i)=>(i?"L":"M")+X(t).toFixed(1)+","+Y(o[c]).toFixed(1)).join("");
+  let g="";
+  for(const p of [0,.25,.5,.75,1]) g+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+Y(p)+'" y2="'+Y(p)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(Y(p)+4)+'" text-anchor="end">'+(p*100)+'%</text>';
+  for(const t of [0,Math.round(n/2),n]) g+='<text x="'+X(t)+'" y="'+(H-8)+'" text-anchor="middle">'+t+'</text>';
+  g+='<line x1="'+X(T50)+'" x2="'+X(T50)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-dasharray="4 4"/>';
+  g+='<line x1="'+X(Ts)+'" x2="'+X(Ts)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="var(--bar)" stroke-width="2"/>';
+  g+='<path d="'+line(0)+'" fill="none" stroke="var(--goal)" stroke-width="2"/><path d="'+line(2)+'" fill="none" stroke="var(--bad)" stroke-width="2"/>';
+  $("slChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="不同止損次數 T 的達成與倒退機率">'+g+'</svg>';
+}
 function setN(n){
   n=Math.max(0,Math.min(NMAX,Math.round(+n||0))); cur.n=n;
   if(n>+$("slider").max){ const m=[100,1000,10000,100000,1000000].find(o=>o>=n)||1000000; $("maxN").value=m; $("slider").max=m; }
@@ -287,6 +470,7 @@ for(let i=0;i<3;i++){
   $("sk"+i).addEventListener("change",e=>{
     cur.sk[i]=e.target.value||null; if(i===0&&!cur.sk[0]) cur.sk[0]=SKILLS.find(s=>!cur.sk.includes(s));
     if(!cur.sk[i]) cur.min[i]=null;
+    cur.cv[i]=null; $("cv"+i).value="";
     fillSkillSelects(); renderTables(); render();
   });
   $("min"+i).addEventListener("input",e=>{ cur.min[i]=readNum(e.target.value); render(); });
@@ -295,6 +479,11 @@ $("tot").addEventListener("input",e=>{ cur.tot=readNum(e.target.value); render()
 $("wmin").addEventListener("change",e=>{ cur.wmin=+e.target.value; render(); });
 $("equip").addEventListener("change",e=>{ cur.equip=e.target.value; fillWeaponSelect(); render(); });
 $("part").addEventListener("change",e=>{ cur.part=e.target.value; renderTables(); render(); });
+$("scene").addEventListener("change",e=>{ cur.scene=e.target.value; render(); });
+for(let i=0;i<3;i++) $("cv"+i).addEventListener("input",e=>{ cur.cv[i]=readNum(e.target.value); render(); });
+$("cvw").addEventListener("input",e=>{ cur.cvw=readNum(e.target.value); render(); });
+$("base").addEventListener("input",e=>{ cur.base=readNum(e.target.value); render(); });
+$("slMode").addEventListener("change",render); $("slRisk").addEventListener("input",render); $("slT").addEventListener("input",render);
 $("slider").addEventListener("input",e=>setN(e.target.value));
 $("nInput").addEventListener("input",e=>setN(e.target.value));
 $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
@@ -302,7 +491,9 @@ $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; setN(Ma
 
 // 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
-  $("equip").value=cur.equip; $("part").value=cur.part;
+  $("equip").value=cur.equip; $("part").value=cur.part; $("scene").value=cur.scene;
+  for(let i=0;i<3;i++) $("cv"+i).value=cur.cv[i]??""; $("cvw").value=cur.cvw??""; $("base").value=cur.base??"";
+  $("slMode").value="r50"; $("slRisk").value="10"; $("slT").value="0";
   fillSkillSelects(); fillWeaponSelect(); renderTables();
   $("slider").max=$("maxN").value; setN(cur.n);
 }
