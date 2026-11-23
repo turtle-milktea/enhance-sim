@@ -362,8 +362,9 @@ function renderStop(){
       ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次強化，之後只要停在 "+S+" 就收手；如果那時還在 "+S+" 以下，就繼續強化，爬回 "+S+" 再收手。"
       : (mode==="r50" ? "建議：" : "自訂：")+"前 "+Ts+" 次照常強化。第 "+Ts+" 次以後，只要回到 "+S+"，就停下來。";
   }
+  // 用殘影的記錄換算次數：數量少、比較不容易算錯
   const C=$("slCount"); C.hidden=!(Ts>0&&Ts<n);
-  if(!C.hidden) C.innerHTML="從開始強化起算，用掉 <b>"+(Ts*MAT[0][1]).toLocaleString("en-US")+" 個"+MAT[0][0]+"</b>（每次 "+MAT[0][1]+" 個），就是第 "+Ts+" 次。";
+  if(!C.hidden) C.innerHTML="從開始強化起算，用掉 <b>"+(Ts*MAT[1][1]).toLocaleString("en-US")+" 個"+MAT[1][0]+"</b>（每次 "+MAT[1][1]+" 個），就是第 "+Ts+" 次。";
 
   // 堆疊長條
   const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+

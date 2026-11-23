@@ -119,6 +119,10 @@ header .fold.rules{margin-top:10px}
 @media (max-width:480px){.stop .mats table{font-size:.74rem}.stop .mats th,.stop .mats td{padding:5px 4px}}
 .count{margin:-8px 0 14px;line-height:1.6}
 .count b{font-weight:600}
+.conv{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.conv input{width:8em}
+.convOut{line-height:1.6}
+.convOut b{font-weight:600}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 .stop #slAtT th{white-space:normal;vertical-align:bottom}
 .stop #slAtT th:first-child{min-width:5em}
@@ -169,6 +173,13 @@ header .fold.rules{margin-top:10px}
       <span class="hint" id="multHint"></span>
       <span class="pair"><label for="maxN">拉桿上限</label><select id="maxN" autocomplete="off"><option selected>200</option><option>1000</option><option>5000</option><option>20000</option></select></span>
       <span class="pair"><label for="scale">橫軸</label><select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
+    </div>
+    <div class="conv">
+      <span class="lab">用材料換算強化次數</span>
+      <span class="pair" id="convBW"><label for="convB">古代龍的骨頭碎片</label><input type="number" id="convB" autocomplete="off" min="0" step="1" placeholder="手上的數量"></span>
+      <span class="pair" id="convGW"><label for="convG">金龍的寶玉碎片</label><input type="number" id="convG" autocomplete="off" min="0" step="1" placeholder="手上的數量"></span>
+      <span class="convOut" id="convOut"></span>
+      <button id="convApply" hidden>套用到強化次數</button>
     </div>
   </section>
 
@@ -359,7 +370,7 @@ function table(c){
   states.forEach((s,i)=>{ if(i===g||!visits[i]) return; const {eq,lv}=parse(s);
     for(const [m,arr] of Object.entries(EQ[eq].mat[c.part])) if(arr[lv+1]) mats[eq][m]=(mats[eq][m]||0)+visits[i]*arr[lv+1]; });
   if(segs.length===2) for(const [m,q] of Object.entries(EVOLVE)) mats.evo[m]=q;
-  return cache[ck]={states,out,S,g,med,E,mats,cum,evolves:segs.length===2};
+  return cache[ck]={states,out,S,g,med,E,mats,cum,visits,evolves:segs.length===2};
 }
 
 // ===== 選單 =====
@@ -426,9 +437,54 @@ function render(){
     const atN=t.cum[n*MAT_ORDER.length+MAT_ORDER.indexOf(m)];
     return "<tr><td>"+m+'</td><td class="now">'+(atN?fmt(atN):"0")+'</td><td class="sum">'+fmt(sum)+"</td>"+(cols.length>1?vals.map(v=>"<td>"+(v?fmt(v):"—")+"</td>").join(""):"")+"</tr>";
   }).join("");
+  renderConv(t);
   renderStop();
 }
 
+
+// ===== 用材料換算強化次數 =====
+// 骨龍看古代龍的骨頭碎片、金龍看金龍的寶玉碎片：+10 以上（金龍 +6 以上）每次用量固定，可以直接除；
+// 低強化階段每次用量較少，這一段以平均強化次數估算。
+const FIXM={bone:"古代龍的骨頭碎片",gold:"金龍的寶玉碎片"};
+function convSeg(t,eq){
+  let cmax=0; const st=[];
+  t.states.forEach((s,i)=>{ if(i===t.g||!(t.visits[i]>1e-12)) return; const {eq:e,lv}=parse(s); if(e!==eq) return;
+    const c=(EQ[eq].mat[cur.part][FIXM[eq]]||[])[lv+1]||0; st.push([i,c]); cmax=Math.max(cmax,c); });
+  let lowN=0, lowC=0; st.forEach(([i,c])=>{ if(c<cmax){ lowN+=t.visits[i]; lowC+=t.visits[i]*c; } });
+  return {cmax,lowN,lowC,used:st.length>0};
+}
+function convCount(seg,own){   // → {n, approx}
+  if(!seg.lowN) return {n:Math.floor(own/seg.cmax),approx:false};
+  if(own>=seg.lowC) return {n:Math.round(seg.lowN)+Math.floor((own-seg.lowC)/seg.cmax),approx:true};
+  return {n:Math.floor(own/(seg.lowC/seg.lowN)),approx:true};
+}
+function renderConv(t){
+  const sEq=parse(cur.start).eq, evo=t.evolves, bone=sEq==="bone", needG=!bone||evo;
+  $("convBW").hidden=!bone; $("convGW").hidden=!needG;
+  const rb=$("convB").value.trim(), rg=$("convG").value.trim(), out=$("convOut"), btn=$("convApply");
+  btn.hidden=true; out.innerHTML=""; let total=null;
+  const f=x=>x.toLocaleString("en-US"), est=(r,txt)=>(r.approx?"大約":"")+txt;
+  const lowNote="（低強化階段每次用量較少，這一段以平均次數估算）";
+  if(!evo){
+    const eq=bone?"bone":"gold", raw=bone?rb:rg; if(raw==="") return;
+    const seg=convSeg(t,eq); if(!seg.used){ out.textContent="已經在目標，不需要強化。"; return; }
+    const r=convCount(seg,Math.max(0,+raw||0)); total=r.n;
+    out.innerHTML=est(r,"可以強化 <b>"+f(r.n)+"</b> 次")+"（"+(r.approx?"每次最多 "+seg.cmax+" 個；低強化階段每次用量較少，這一段以平均次數估算":"每次 "+seg.cmax+" 個")+"）。";
+  } else {
+    const sb=convSeg(t,"bone"), sg=convSeg(t,"gold"), ev=EVOLVE[FIXM.gold]||0, parts=[];
+    let nb=null, ng=null;
+    if(rb!==""){ if(sb.used){ const r=convCount(sb,Math.max(0,+rb||0)); nb=r.n; parts.push(est(r,"骨龍階段可以強化 <b>"+f(r.n)+"</b> 次")+(r.approx?lowNote:"")); } else nb=0; }
+    if(rg!==""){ const own=Math.max(0,+rg||0);
+      if(own<ev) { ng=0; parts.push("寶玉碎片不夠進化（進化要 "+ev+" 個）"); }
+      else { const r=convCount(sg,own-ev); ng=r.n; parts.push("進化後，金龍階段可以強化 <b>"+f(r.n)+"</b> 次（已扣掉進化用的 "+ev+" 個寶玉碎片）"); } }
+    if(!parts.length) return;
+    let txt=parts.join("；")+"。";
+    if(nb!==null&&ng!==null){ total=nb+ng;
+      txt+= (+rg||0)<ev ? "所以最多只能強化到進化前，合計 <b>"+f(total)+"</b> 次。" : "合計最多 <b>"+f(total)+"</b> 次；如果進化時骨頭碎片還有剩，剩下的不能用在金龍強化。"; }
+    out.innerHTML=txt;
+  }
+  if(total!==null){ btn.hidden=false; btn.textContent="套用到強化次數（"+f(total)+" 次）"; btn.dataset.n=total; }
+}
 
 // ===== 止損策略 =====
 // 前 T 次照常強化（到達目標即停止）；第 T 次之後，只要停在起點等級就收手；高於起點繼續衝，低於起點繼續爬回起點。
@@ -705,6 +761,8 @@ $("scale").addEventListener("change",render);
 $("slMode").addEventListener("change",render);
 $("slRisk").addEventListener("input",render);
 $("slT").addEventListener("input",render);
+["convB","convG"].forEach(id=>$(id).addEventListener("input",()=>renderConv(table(cur))));
+$("convApply").addEventListener("click",e=>setN(+e.target.dataset.n));
 $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
 function multHint(){
   const h=$("multHint"); h.className="hint";
