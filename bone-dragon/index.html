@@ -438,7 +438,18 @@ function stopLoss(c,n){
     for(let i=0;i<S;i++) if(!below[i]){ back+=w[i]; w[i]=0; }
     u=w; if(back>=0.5){ r50=r; break; }
   }
-  return slCache[ck]={states,idx,T,S,g,s0,below,D,R,r50,b,n,startLab};
+  // 從每個狀態出發，還能不能再回到起點（例如已經進化成金龍，或骨龍 +14 以上時，都回不到骨龍 +13）
+  const back2start=new Array(S).fill(false); back2start[s0]=true;
+  for(let changed=true;changed;){ changed=false;
+    for(let i=0;i<S;i++){ if(back2start[i]||i===g) continue; if(T[i].some(([j,p])=>p>0&&back2start[j])){ back2start[i]=true; changed=true; } } }
+  return slCache[ck]={states,idx,T,S,g,s0,below,D,R,r50,b,n,startLab,back2start};
+}
+// 從狀態 i 出發，最低可能掉到哪一級（沿路徑排序）
+function lowestFrom(sl,i){
+  const seen=new Set([i]), st=[i]; let low=i;
+  while(st.length){ const x=st.pop(); if(rankOf(sl.states[x])<rankOf(sl.states[low])) low=x;
+    for(const [j,p] of sl.T[x]) if(p>0&&!seen.has(j)&&j!==sl.g){ seen.add(j); st.push(j); } }
+  return sl.states[low];
 }
 // 剩 r 次的結果：照規則（stop = true，停在起點就收手）或不止損（stop = false）
 function stepG(G,T,S,g,s0,stop){
@@ -512,7 +523,15 @@ function renderStop(){
     let adv, cls="";
     if(i===sl.g) adv="已到達目標，停止。";
     else if(i===sl.s0) adv=(Ts<n?"照策略收手，維持 "+S+"。":"")+"若仍繼續用完剩下 "+r+" 次：提升到 "+G+" "+pc(h3(0))+"，維持不低於 "+S+" "+pc(h3(0)+h3(1))+"。";
-    else if(!sl.below[i]) adv="繼續強化，之後若掉回 "+S+" 就收手：提升到 "+G+" "+pc(g3(0))+"，維持不低於 "+S+" "+pc(g3(0)+g3(1))+"。";
+    else if(!sl.below[i]){
+      if(sl.back2start[i]) adv="繼續強化，之後若掉回 "+S+" 就收手：提升到 "+G+" "+pc(g3(0))+"，維持不低於 "+S+" "+pc(g3(0)+g3(1))+"。";
+      else {
+        const why = parse(sl.states[i]).eq==="gold" && parse(sl.states[sl.s0]).eq==="bone"
+          ? "已經進化成金龍，不會再變回骨龍"
+          : "從這裡失敗最多只會掉到 "+lab(lowestFrom(sl,i))+"，不會再回到 "+S;
+        adv="繼續強化，不需要止損（"+why+"）：提升到 "+G+" "+pc(g3(0))+"。";
+      }
+    }
     else { cls="basis"; adv='<span class="tag">萬一在 '+S+' 失敗，會先掉到這裡。</span>繼續強化，爬回 '+S+' 就收手（機率見下方）。'; }
     rows.push('<tr class="'+cls+'"><td>'+lab(sl.states[i])+"</td><td>"+pc(pl)+"</td><td>"+adv+"</td></tr>");
   }
