@@ -312,8 +312,10 @@ function renderStop(){
   } else if(Ts>=n){
     V.className="verdict"; V.textContent="T = "+n+"：等於不止損，用完全部 "+n+" 次。";
   } else {
-    const lead = mode==="r50" ? "建議：" : mode==="risk" ? "倒退機率在 "+(+$("slRisk").value||0)+"% 以內、到達機會最高的做法：" : "自訂：";
-    V.className="verdict"; V.textContent=lead+"強化到第 "+Ts+" 次後，只要停在 "+S+" 就收手。";
+    V.className="verdict";
+    V.textContent = mode==="risk"
+      ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次強化，之後只要停在 "+S+" 就收手；如果那時還在 "+S+" 以下，就繼續強化，爬回 "+S+" 再收手。"
+      : (mode==="r50" ? "建議：" : "自訂：")+"強化到第 "+Ts+" 次後，只要停在 "+S+" 就收手。";
   }
   // 堆疊長條
   const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
@@ -364,7 +366,7 @@ function renderStop(){
   if(Ts===0) ex.push("<li>T = 0 表示不進行強化，結果一定是維持在 "+S+"。若仍要強化，請參考上方「用完 "+n+" 次」的結果。</li>");
   ex.push("<li>預設的 T 怎麼來：萬一在 "+S+" 失敗會掉到 "+below+"，從 "+below+" 要 "+r50+" 次才有 50% 的機會爬回 "+S+"。所以在最後 "+r50+" 次之前（第 "+n+" − "+r50+" = "+T50+" 次後），只要停在 "+S+" 就收手。</li>");
   ex.push("<li>怎麼選 T：T 越大越積極，越接近「用完全部次數」，到達目標的機會較高，但倒退的風險也較高；T 越小越保守。</li>");
-  ex.push("<li>其他方式：「指定可接受的倒退機率」會在倒退機率不超過你設定的值之下，找出到達機會最高的 T；「自訂止損次數 T」可以直接試算任何 T。</li>");
+  ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次強化；「自訂止損次數 T」可以直接試算任何 T。</li>");
   $("slExplain").innerHTML=ex.join("");
   drawStopChart(R,n,Ts,T50);
 }
