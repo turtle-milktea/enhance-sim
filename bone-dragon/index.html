@@ -87,7 +87,11 @@ h2{font-size:1rem;margin:0 0 8px}
 .slctl select{max-width:100%;width:100%}
 .stop table td{white-space:normal;vertical-align:top;line-height:1.6}
 .stop table td:first-child,.stop table td:nth-child(2){white-space:nowrap;font-family:var(--mono)}
-.verdict{font-size:1.05rem;font-weight:600;margin:14px 0 10px;line-height:1.6}
+.verdict{font-size:1.05rem;font-weight:600;margin:4px 0 14px;line-height:1.6}
+.howto{padding-block:12px;background:color-mix(in srgb,var(--bar) 8%,var(--panel))}
+.howto h2{font-size:.92rem;margin:0 0 4px}
+.howto p{margin:0;font-size:.9rem;line-height:1.6}
+#slBody{margin-top:14px}
 .verdict.warn{color:var(--drop)}
 .sbars{display:flex;flex-direction:column;gap:12px}
 .sbar .cap{font-size:.85rem;color:var(--muted);margin-bottom:4px}
@@ -123,10 +127,15 @@ h2{font-size:1rem;margin:0 0 8px}
       <li>骨龍 +15 以上可以進化為金龍 +10（進化不算一次強化），金龍不能換回骨龍。</li>
       <li>遇到機率活動時，可調整成功率倍率（1～10）：所有成功率未滿 100% 的階段都乘上倍率，超過 100% 時以 100% 計。</li>
       <li>拖動拉桿，查看強化 n 次後停在各等級的機率。</li>
-      <li>止損策略：前 T 次照常強化；第 T 次之後，只要停在起點等級就收手，避免預算用完時停在起點以下。</li>
+      <li>止損就是「見好就收」：前面照常強化；快沒次數的時候，只要回到原本的等級就停下來，免得最後掉得比原本還低。代價是衝上目標的機會會少一點，所以要在「少掉下去」和「多衝上去」之間取捨。</li>
     </ol>
     <p class="meta">製作日期：2026-11-12・更新日期：2026-11-18</p>
   </header>
+
+  <section class="panel howto" aria-label="怎麼看機率">
+    <h2>怎麼看機率</h2>
+    <p>例如「到達 60%」的意思是，如果有 100 個人都照這樣強化，大約 60 個人會衝上目標。</p>
+  </section>
 
   <section class="panel controls">
     <div class="row" style="justify-content:space-between">
@@ -162,15 +171,15 @@ h2{font-size:1rem;margin:0 0 8px}
 
   <section class="panel stop" id="stopPanel">
     <h2>止損策略</h2>
+    <p class="verdict" id="slVerdict"></p>
     <div class="slctl">
       <label for="slMode">止損點的決定方式</label><select id="slMode" autocomplete="off">
-        <option value="r50" selected>建議（掉下去時，剩餘次數有 50% 機率爬回起點）</option>
+        <option value="r50" selected>推薦的做法（掉下去還有一半的機會爬回來，就繼續衝）</option>
         <option value="risk">指定可接受的倒退機率</option>
-        <option value="custom">自訂止損次數 T</option></select>
+        <option value="custom">我自己決定第幾次後收手</option></select>
       <span class="pair" id="slRiskWrap" hidden><label for="slRisk">可接受的倒退機率</label><input type="number" id="slRisk" autocomplete="off" min="0" max="100" step="1" value="10"><span class="lab">%</span></span>
-      <span class="pair" id="slTWrap" hidden><label for="slT">止損次數 T</label><input type="number" id="slT" autocomplete="off" min="0" max="20000" step="1" value="0"></span>
+      <span class="pair" id="slTWrap" hidden><label for="slT">第幾次後收手</label><input type="number" id="slT" autocomplete="off" min="0" max="20000" step="1" value="0"></span>
     </div>
-    <p class="verdict" id="slVerdict"></p>
     <div id="slBody">
       <div class="sbars" id="slBars"></div>
       <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於起點、未達目標）</span><span><i class="sw down"></i>倒退（低於起點）</span></div>
@@ -498,7 +507,7 @@ function renderStop(){
   if(Ts===0){
     V.className="verdict warn";
     V.textContent= mode==="r50"
-      ? "不建議強化：從 "+below+" 爬回 "+S+" 要 "+r50+" 次才有 50% 的機會，但預算只有 "+n+" 次，一掉下去就很難爬回來。"
+      ? "現在不建議強化。萬一掉到 "+below+"，要再強化 "+r50+" 次，才有一半的機會爬回 "+S+"，可是你只準備了 "+n+" 次。"
       : "止損次數 T = 0：等於一開始就停在 "+S+"，不進行強化。";
   } else if(Ts>=n){
     V.className="verdict"; V.textContent="T = "+n+"：等於不止損，用完全部 "+n+" 次。";
@@ -506,12 +515,12 @@ function renderStop(){
     V.className="verdict";
     V.textContent = mode==="risk"
       ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次強化，之後只要停在 "+S+" 就收手；如果那時還在 "+S+" 以下，就繼續強化，爬回 "+S+" 再收手。"
-      : (mode==="r50" ? "建議：" : "自訂：")+"強化到第 "+Ts+" 次後，只要停在 "+S+" 就收手。";
+      : (mode==="r50" ? "建議：" : "自訂：")+"前 "+Ts+" 次照常強化。第 "+Ts+" 次以後，只要回到 "+S+"，就停下來。";
   }
   const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
     [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
     '</div><div class="nums">到達 '+pc(a[0])+'・維持 '+pc(a[1])+'・倒退 '+pc(a[2])+'</div></div>';
-  $("slBars").innerHTML=bar("用完 "+n+" 次（不止損）",base)+(Ts<n?bar(Ts===0?"不強化（T = 0）":"第 "+Ts+" 次後止損",strat):"");
+  $("slBars").innerHTML=bar("一直強化到 "+n+" 次用完（不止損）",base)+(Ts<n?bar(Ts===0?"不強化":(mode==="r50"?"照建議，":"")+"第 "+Ts+" 次後見好就收",strat):"");
   // 第 T 次時的情況
   const r=n-Ts, used=usedAttempts(sl,Ts);
   const {G:Gr,prev:Gr1}=resultsAt(sl,r,true), {G:Hr}=resultsAt(sl,r,false);
@@ -556,7 +565,7 @@ function renderStop(){
   if(Ts===0) ex.push("<li>T = 0 表示不進行強化，結果一定是維持在 "+S+"。若仍要強化，請參考上方「用完 "+n+" 次」的結果。</li>");
   ex.push("<li>預設的 T 怎麼來：萬一在 "+S+" 失敗會掉到 "+below+"，從 "+below+" 要 "+r50+" 次才有 50% 的機會爬回 "+S+"。所以在最後 "+r50+" 次之前（第 "+n+" − "+r50+" = "+T50+" 次後），只要停在 "+S+" 就收手。</li>");
   ex.push("<li>怎麼選 T：T 越大越積極，越接近「用完全部次數」，到達目標的機會較高，但倒退的風險也較高；T 越小越保守。</li>");
-  ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次強化；「自訂止損次數 T」可以直接試算任何 T。</li>");
+  ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次強化；「我自己決定第幾次後收手」可以直接試算任何時間點。</li>");
   $("slExplain").innerHTML=ex.join("");
   drawStopChart(R,n,Ts,T50);
 }
