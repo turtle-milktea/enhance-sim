@@ -66,6 +66,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .slchart svg{width:100%;height:auto;display:block;margin-top:8px}
 .slchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
 .lab{font-size:.9rem;color:var(--muted)}
+.fold{margin-top:16px}
+.fold summary{cursor:pointer;font-weight:500}
+header .fold.rules{margin-top:10px}
 [hidden]{display:none!important}
 .chart{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:260px;border-bottom:1px solid var(--line);position:relative}
 .col{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
@@ -102,14 +105,17 @@ td.dropcell{color:var(--bad);font-weight:500}
   <header>
     <a class="back" href="../">← 回到目錄</a>
     <h1>凍龍托利斯曼強化規則</h1>
-    <ol class="sub rules-list">
-      <li>以 +10 為起點強化到 +15（舊版模擬器的 +0～+5 即 +10～+15）。</li>
-      <li>每次強化成功率 10%；+11 以上失敗時，50% 下降一級、50% 不變；+10 失敗時不變。</li>
-      <li>到達目標等級即停止（+15 為上限，到達後也停止）。</li>
-      <li>遇到機率活動時，可調整成功率倍率（1～10）：成功率乘上倍率，超過 100% 時以 100% 計。</li>
-      <li>拖動拉桿，查看強化 n 次後停在各等級的機率。</li>
-      <li>止損就是「見好就收」：前面照常強化；快沒次數的時候，只要回到原本的等級就停下來，免得最後掉得比原本還低。代價是衝上目標的機會會少一點，所以要在「少掉下去」和「多衝上去」之間取捨。</li>
-    </ol>
+    <details class="fold rules">
+      <summary>規則說明</summary>
+      <ol class="sub rules-list">
+        <li>以 +10 為起點強化到 +15（舊版模擬器的 +0～+5 即 +10～+15）。</li>
+        <li>每次強化成功率 10%；+11 以上失敗時，50% 下降一級、50% 不變；+10 失敗時不變。</li>
+        <li>到達目標等級即停止（+15 為上限，到達後也停止）。</li>
+        <li>遇到機率活動時，可調整成功率倍率（1～10）：成功率乘上倍率，超過 100% 時以 100% 計。</li>
+        <li>拖動拉桿，查看強化 n 次後停在各等級的機率。</li>
+        <li>止損就是「見好就收」：前面照常強化；快沒次數的時候，只要回到原本的等級就停下來，免得最後掉得比原本還低。代價是衝上目標的機會會少一點，所以要在「少掉下去」和「多衝上去」之間取捨。</li>
+      </ol>
+    </details>
     <p class="meta">製作日期：2026-11-03</p>
   </header>
 
@@ -170,8 +176,10 @@ td.dropcell{color:var(--bad);font-weight:500}
       <h3 id="slAtTH"></h3>
       <div class="tblwrap"><table id="slAtT"><thead><tr><th>第 T 次時的等級</th><th>機率</th><th>建議與之後的機率</th></tr></thead><tbody></tbody></table></div>
       <div class="below" id="slBelow"></div>
-      <h3>策略解讀</h3>
-      <ul class="explain" id="slExplain"></ul>
+      <details class="fold">
+        <summary>策略解讀</summary>
+        <ul class="explain" id="slExplain"></ul>
+      </details>
       <details class="adv">
         <summary>參考數據：不同止損次數 T 的比較</summary>
         <p class="note">怎麼看這張圖：橫軸是止損次數 T（第 T 次之後，只要停在起點就收手），縱軸是用完預算後的結果機率。橘線是「到達目標」，紅線是「倒退」。T 越往右越積極，到達目標的機會增加，但倒退的風險也增加；T 越往左越保守。藍色直線是目前採用的 T，虛線是預設建議的 T。可以用這張圖看「多冒一點倒退風險，能換到多少到達機率」。</p>
@@ -422,13 +430,15 @@ function render(){
     + " 對數縱軸以 10⁻⁶ 為下限。橘色長條為目標等級。";
   renderStop();
 }
-function setN(n){
+function setN(n,fromBox){   // fromBox：從「直接輸入」打字時不回寫欄位，避免中文輸入法重複輸入數字
   n=Math.max(0,Math.min(MAXN,Math.round(+n||0))); cur.n=n;
   if(n>+$("slider").max){ const opts=[200,1000,5000,20000]; const m=opts.find(o=>o>=n); $("maxN").value=m; $("slider").max=m; }
-  $("slider").value=n; $("nInput").value=n; render();
+  $("slider").value=n; if(!fromBox) $("nInput").value=n; render();
 }
 $("slider").addEventListener("input",e=>setN(e.target.value));
-$("nInput").addEventListener("input",e=>setN(e.target.value));
+$("nInput").addEventListener("input",e=>{ if(!e.isComposing) setN(e.target.value,true); });
+$("nInput").addEventListener("compositionend",e=>setN(e.target.value,true));
+$("nInput").addEventListener("change",e=>setN(e.target.value));   // 離開欄位時，改成實際採用的次數
 $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
 $("start").addEventListener("change",e=>{cur.start=+e.target.value; render();});
 $("target").addEventListener("change",e=>{cur.target=+e.target.value; render();});
