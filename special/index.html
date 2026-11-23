@@ -108,6 +108,9 @@ tr.cared td{color:var(--goal);font-weight:500}
 .riskin{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center;padding:12px;border:1px dashed var(--line);border-radius:8px}
 .riskin input[type=number]{width:6.5em}
 @media (max-width:480px){.riskin{grid-template-columns:1fr}}
+.fold{margin-top:16px}
+.fold summary{cursor:pointer;font-weight:500}
+header .fold.rules{margin-top:10px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -117,17 +120,20 @@ tr.cared td{color:var(--goal);font-weight:500}
   <header>
     <a class="back" href="../">← 回到目錄</a>
     <h1>骨龍・金龍特殊屬性重置</h1>
-    <ol class="sub rules-list">
-      <li>骨龍：從上排表格隨機 3 條。金龍：另外再從「第四條」表格隨機 1 條。各條都可能抽到同一個項目。</li>
-      <li>每條從「項目 × 階級」的所有組合中抽一個，機率 = 項目機率 × 階級機率。</li>
-      <li>每次重置（隨機）都會重新抽出全部條數。消耗：骨龍防具為時間之沙 × 1 + 1,000 金幣，骨龍武器為時間之沙 × 1 + 2,000 金幣（時間之沙可用方舟的時間之沙代替）；金龍防具、武器皆為金龍的寶玉碎片 × 3 + 1,000 金幣。</li>
-      <li>防具：選 1～3 項技能，可設定每項至少多少、所選技能總和至少多少，所有條件要同時達成。武器：設定古代技能總和至少多少。</li>
-      <li>「選擇」：重抽全部條數後，可在新舊兩組結果中二選一。單獨使用時，達成機率和「隨機」相同，只是多消耗機械零件。</li>
-      <li>「隨機＋鎖定」：先用隨機重置；抽到有用的條時，鎖住數值最高的那條（骨龍最多 1 條、金龍最多 2 條），但只在鎖住後目標仍可能達成時才鎖；鎖住後不解鎖，之後每次重置依鎖定條數付費。</li>
-      <li>「隨機＋鎖定」時，如果裝備上已經有鎖住的條，可以在對應的目標旁勾選「已鎖住」並選數值（金龍另選上排或第四條），從這個狀態開始計算；金龍只鎖 1 條時，之後仍依策略自動鎖第 2 條。</li>
-      <li>拖動拉桿，查看重置 n 次內至少達成一次目標的機率。</li>
-      <li>使用情境選「以目前裝備為基準的風險評估」時，可輸入目前的數值，計算止損策略：前 T 次重抽只在達成目標時停止；第 T 次之後，只要抽到不低於保底的結果就收手，避免越抽越差。</li>
-    </ol>
+    <details class="fold rules">
+      <summary>規則說明</summary>
+      <ol class="sub rules-list">
+        <li>骨龍：從上排表格隨機 3 條。金龍：另外再從「第四條」表格隨機 1 條。各條都可能抽到同一個項目。</li>
+        <li>每條從「項目 × 階級」的所有組合中抽一個，機率 = 項目機率 × 階級機率。</li>
+        <li>每次重置（隨機）都會重新抽出全部條數。消耗：骨龍防具為時間之沙 × 1 + 1,000 金幣，骨龍武器為時間之沙 × 1 + 2,000 金幣（時間之沙可用方舟的時間之沙代替）；金龍防具、武器皆為金龍的寶玉碎片 × 3 + 1,000 金幣。</li>
+        <li>防具：選 1～3 項技能，可設定每項至少多少、所選技能總和至少多少，所有條件要同時達成。武器：設定古代技能總和至少多少。</li>
+        <li>「選擇」：重抽全部條數後，可在新舊兩組結果中二選一。單獨使用時，達成機率和「隨機」相同，只是多消耗機械零件。</li>
+        <li>「隨機＋鎖定」：先用隨機重置；抽到有用的條時，鎖住數值最高的那條（骨龍最多 1 條、金龍最多 2 條），但只在鎖住後目標仍可能達成時才鎖；鎖住後不解鎖，之後每次重置依鎖定條數付費。</li>
+        <li>「隨機＋鎖定」時，如果裝備上已經有鎖住的條，可以在對應的目標旁勾選「已鎖住」並選數值（金龍另選上排或第四條），從這個狀態開始計算；金龍只鎖 1 條時，之後仍依策略自動鎖第 2 條。</li>
+        <li>拖動拉桿，查看重置 n 次內至少達成一次目標的機率。</li>
+        <li>使用情境選「以目前裝備為基準的風險評估」時，可輸入目前的數值，計算止損策略：前 T 次重抽只在達成目標時停止；第 T 次之後，只要抽到不低於保底的結果就收手，避免越抽越差。</li>
+      </ol>
+    </details>
     <p class="meta">製作日期：2026-11-22</p>
   </header>
 
@@ -207,8 +213,10 @@ tr.cared td{color:var(--goal);font-weight:500}
       <h3 id="slAtTH"></h3>
       <div class="tblwrap"><table id="slAtT"><thead><tr><th>第 T 次的結果</th><th>機率</th><th>建議與之後的機率</th></tr></thead><tbody></tbody></table></div>
       <div class="below" id="slBelow"></div>
-      <h3>策略解讀</h3>
-      <ul class="explain" id="slExplain"></ul>
+      <details class="fold">
+        <summary>策略解讀</summary>
+        <ul class="explain" id="slExplain"></ul>
+      </details>
       <details class="adv">
         <summary>參考數據：不同止損次數 T 的比較</summary>
         <p class="note">怎麼看這張圖：橫軸是止損次數 T（第 T 次之後，只要抽到不低於保底的結果就收手），縱軸是用完預算後的結果機率。橘線是「到達目標」，紅線是「倒退」。T 越往右越積極，到達目標的機會增加，但倒退的風險也增加；T 越往左越保守。藍色直線是目前採用的 T，虛線是預設建議的 T。可以用這張圖看「多冒一點倒退風險，能換到多少到達機率」。</p>
@@ -663,10 +671,10 @@ function drawRiskChart(pts,n,Ts,T50){
   g+='<path d="'+line(0)+'" fill="none" stroke="var(--goal)" stroke-width="2"/><path d="'+line(2)+'" fill="none" stroke="var(--bad)" stroke-width="2"/>';
   $("slChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="不同止損次數 T 的達成與倒退機率">'+g+'</svg>';
 }
-function setN(n){
+function setN(n,fromBox){   // fromBox：從「直接輸入」打字時不回寫欄位，避免中文輸入法重複輸入數字
   n=Math.max(0,Math.min(NMAX,Math.round(+n||0))); cur.n=n;
   if(n>+$("slider").max){ const m=[100,1000,10000,100000,1000000].find(o=>o>=n)||1000000; $("maxN").value=m; $("slider").max=m; }
-  $("slider").value=Math.min(n,+$("slider").max); $("nInput").value=n; render();
+  $("slider").value=Math.min(n,+$("slider").max); if(!fromBox) $("nInput").value=n; render();
 }
 // 數字欄位：空白 = 不限；負數或非數字視為不限
 const readNum=v=>{ if(v===""||v==null) return null; const x=Number(v); return Number.isFinite(x)&&x>=0 ? x : null; };
@@ -696,7 +704,9 @@ const lkOf=j=>j==="W"?cur.lkw:cur.lk[+j];
   $("lkp"+j).addEventListener("change",e=>{ lkOf(j).pos=e.target.value; fillLockSelects(); render(); });
 });
 $("slider").addEventListener("input",e=>setN(e.target.value));
-$("nInput").addEventListener("input",e=>setN(e.target.value));
+$("nInput").addEventListener("input",e=>{ if(!e.isComposing) setN(e.target.value,true); });
+$("nInput").addEventListener("compositionend",e=>setN(e.target.value,true));
+$("nInput").addEventListener("change",e=>setN(e.target.value));   // 離開欄位時，改成實際採用的次數
 $("inc").onclick=()=>setN(cur.n+1); $("dec").onclick=()=>setN(cur.n-1);
 $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; setN(Math.min(cur.n,+e.target.value)); });
 
