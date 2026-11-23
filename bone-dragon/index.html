@@ -114,6 +114,9 @@ h2{font-size:1rem;margin:0 0 8px}
 .fold{margin-top:16px}
 .fold summary{cursor:pointer;font-weight:500}
 header .fold.rules{margin-top:10px}
+.stop .mats table td:first-child{white-space:normal;min-width:4.5em;font-family:var(--sans)}
+.stop .mats table td:not(:first-child){white-space:nowrap;font-family:var(--mono)}
+@media (max-width:480px){.stop .mats table{font-size:.74rem}.stop .mats th,.stop .mats td{padding:5px 4px}}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -189,6 +192,11 @@ header .fold.rules{margin-top:10px}
     <div id="slBody">
       <div class="sbars" id="slBars"></div>
       <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於起點、未達目標）</span><span><i class="sw down"></i>倒退（低於起點）</span></div>
+      <div id="slMatsWrap">
+        <h3>平均會用掉的材料</h3>
+        <div class="tblwrap mats"><table id="slMats"><thead></thead><tbody></tbody></table></div>
+        <p class="matsNote">見好就收時沒用完的材料，可以留到下次再用。</p>
+      </div>
       <h3 id="slAtTH"></h3>
       <div class="tblwrap"><table id="slAtT"><thead><tr><th>第 T 次時的等級</th><th>機率</th><th>建議與之後的機率</th></tr></thead><tbody></tbody></table></div>
       <div class="below" id="slBelow"></div>
@@ -484,6 +492,27 @@ function resultsAt(sl,r,stop){
   for(let k=1;k<=r;k++){ prev=G; G=stepG(G,T,S,g,s0,stop); }
   return {G,prev};
 }
+// 照止損規則（第 Ts 次後停在起點就收手）用完 n 次時，平均用掉的強化次數與各材料；Ts = n 即不止損
+function stopMats(sl,Ts){
+  const {S,g,s0,T,n,states}=sl, MK=MAT_ORDER.length, cost=MAT_ORDER.map(()=>new Float64Array(S));
+  states.forEach((st,i)=>{ if(i===g) return; const {eq,lv}=parse(st);
+    MAT_ORDER.forEach((m,a)=>{ const arr=EQ[eq].mat[cur.part][m]; if(arr&&arr[lv+1]) cost[a][i]=arr[lv+1]; }); });
+  let v=new Float64Array(S); v[s0]=1; let used=0; const tot=new Float64Array(MK);
+  for(let t=0;t<n;t++){
+    const w=new Float64Array(S);
+    for(let i=0;i<S;i++){ const x=v[i]; if(!x) continue;
+      if(i===g||(t>=Ts&&i===s0)){ w[i]+=x; continue; }
+      used+=x; for(let a=0;a<MK;a++) if(cost[a][i]) tot[a]+=x*cost[a][i];
+      for(const [j,p] of T[i]) w[j]+=x*p; }
+    v=w;
+  }
+  // 進化材料：骨龍出發、目標是金龍時，結束時已經是金龍的機率 × 進化材料
+  if(parse(cur.start).eq==="bone" && parse(cur.target).eq==="gold"){
+    let pe=0; states.forEach((st,i)=>{ if(parse(st).eq==="gold") pe+=v[i]; });
+    MAT_ORDER.forEach((m,a)=>{ if(EVOLVE[m]) tot[a]+=pe*EVOLVE[m]; });
+  }
+  return {used,tot};
+}
 function usedAttempts(sl,Ts){
   const {S,g,s0,T,n}=sl; let v=new Float64Array(S); v[s0]=1; let used=0;
   for(let t=0;t<n;t++){
@@ -531,6 +560,14 @@ function renderStop(){
   $("slBars").innerHTML=bar("一直強化到 "+n+" 次用完（不止損）",base)+(Ts<n?bar(Ts===0?"不強化":(mode==="r50"?"照建議，":"")+"第 "+Ts+" 次後見好就收",strat):"");
   // 第 T 次時的情況
   const r=n-Ts, used=usedAttempts(sl,Ts);
+  // 材料表：不止損 vs 照策略
+  $("slMatsWrap").hidden = Ts>=n;
+  if(Ts<n){
+    const A=stopMats(sl,n), B=stopMats(sl,Ts), f=x=>x>=1e-9?fmt(x):"0";
+    const rowsM=[["強化次數",A.used,B.used]].concat(MAT_ORDER.map((m,a)=>[m,A.tot[a],B.tot[a]]).filter(([,x])=>x>1e-9));
+    $("slMats").tHead.innerHTML="<tr><th>材料</th><th>不止損</th><th>"+(Ts===0?"不強化":"見好就收")+"</th><th>少用</th></tr>";
+    $("slMats").tBodies[0].innerHTML=rowsM.map(([m,x,y])=>"<tr><td>"+m+"</td><td>"+f(x)+'</td><td class="now">'+f(y)+"</td><td>"+f(x-y)+"</td></tr>").join("");
+  }
   const {G:Gr,prev:Gr1}=resultsAt(sl,r,true), {G:Hr}=resultsAt(sl,r,false);
   $("slAtTH").textContent="第 "+Ts+" 次時的情況（剩下 "+r+" 次）";
   const rows=[], ord=[...sl.states.keys()].sort((a,b2)=>rankOf(sl.states[b2])-rankOf(sl.states[a]));
@@ -566,7 +603,7 @@ function renderStop(){
   if(Ts<n && Ts>0){
     ex.push("<li>第 "+Ts+" 次後止損：到達 "+G+" "+pc(strat[0])+"（"+(strat[0]<=base[0]?"減少 ":"增加 ")+pp(strat[0]-base[0])+"）、維持 "+pc(strat[1])+"、倒退 "+pc(strat[2])+"（"+(strat[2]<=base[2]?"減少 ":"增加 ")+pp(strat[2]-base[2])+"）。</li>");
     ex.push("<li>換句話說：放棄 "+pp(base[0]-strat[0])+" 的到達機會，換到倒退風險減少 "+pp(base[2]-strat[2])+"。</li>");
-    ex.push("<li>止損時平均實際用掉 "+used.toFixed(1)+" 次，剩下的材料可以留到下次。「維持」包含提早收手、沒用完材料的情況。</li>");
+    ex.push("<li>止損時平均實際用掉 "+used.toFixed(1)+" 次（各材料的用量見上方「平均會用掉的材料」）。「維持」包含提早收手、沒用完材料的情況。</li>");
   }
   if(Ts===0) ex.push("<li>T = 0 表示不進行強化，結果一定是維持在 "+S+"。若仍要強化，請參考上方「用完 "+n+" 次」的結果。</li>");
   ex.push("<li>預設的 T 怎麼來：萬一在 "+S+" 失敗會掉到 "+below+"，從 "+below+" 要 "+r50+" 次才有 50% 的機會爬回 "+S+"。所以在最後 "+r50+" 次之前（第 "+n+" − "+r50+" = "+T50+" 次後），只要停在 "+S+" 就收手。</li>");
