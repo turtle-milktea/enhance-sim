@@ -342,7 +342,7 @@ function renderStop(){
     let adv, cls="";
     if(l>=T) adv="已到達目標，停止。";
     else if(l===st) adv=(Ts<n?"照策略收手，維持 "+S+"。":"")+"若仍繼續用完剩下 "+r+" 次：提升到 "+G+" "+pc(h(0))+"，維持不低於 "+S+" "+pc(h(0)+h(1))+"。";
-    else if(l>st) adv="繼續強化，之後若掉回 "+S+" 就收手：提升到 "+G+" "+pc(g(0))+"，維持不低於 "+S+" "+pc(g(0)+g(1))+"。";
+    else if(l>st) adv="繼續強化，之後若掉回 "+S+" 就收手：提升到 "+G+" "+pc(g(0))+"。";
     else if(l===st-1){ cls="basis"; adv='<span class="tag">萬一在 '+S+' 失敗，會先掉到這裡。</span>繼續強化，爬回 '+S+' 就收手（機率見下方）。'; }
     else adv="繼續強化，爬回 "+S+" 就收手（機率見下方）。";
     rows.push('<tr class="'+cls+'"><td>'+LV(l)+"</td><td>"+pc(pl)+"</td><td>"+adv+"</td></tr>");
@@ -361,7 +361,7 @@ function renderStop(){
       bl.push(t+'</li>');
     } else bl.push('<li>掉到 '+LV(l)+'：剩下 '+r+' 次內爬回 '+S+' 的機率 '+pc(back)+'。</li>');
   }
-  bl.push('<li>托利斯曼最低只會到 '+LV(0)+'：'+LV(0)+' 強化失敗不會再往下掉。</li>');
+  bl.push('<li>'+LV(0)+' 強化失敗不會再往下掉，最低就是 '+LV(0)+'。</li>');
   $("slBelow").innerHTML='<p>第 '+Ts+' 次時如果低於 '+S+'，各種情況爬回 '+S+' 的機率：</p><ul>'+bl.join("")+'</ul>';
   $("slBelow").hidden = Ts>=n;
   // 策略解讀（條列）
