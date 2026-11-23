@@ -9,15 +9,15 @@
 /* Layout: single column instrument panel — controls, horizontal bar chart (one row per level), stats, rule table */
 :root{
   --bg:#f5f6f9; --panel:#ffffff; --fg:#1b2030; --muted:#636a80; --line:#dde1ea; --track:#eef0f5;
-  --bar:#4a63c9; --goal:#d98a1c; --drop:#c0483c; --gold:#b48a1e;
+  --bar:#4a63c9; --goal:#d98a1c; --drop:#c0483c; --gold:#b48a1e; --keep:#6f86c9;
   --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
-  --bar:#7d93ee; --goal:#f0a640; --drop:#e9786b; --gold:#d8b552; color-scheme:dark}}
+  --bar:#7d93ee; --goal:#f0a640; --drop:#e9786b; --gold:#d8b552; --keep:#5b6fb4; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
-  --bar:#7d93ee; --goal:#f0a640; --drop:#e9786b; --gold:#d8b552; color-scheme:dark}
+  --bar:#7d93ee; --goal:#f0a640; --drop:#e9786b; --gold:#d8b552; --keep:#5b6fb4; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
 .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
@@ -80,6 +80,33 @@ td.dropcell{color:var(--drop);font-weight:500}
 .mats table td:not(:first-child),.mats table th:not(:first-child){text-align:right}
 h2{font-size:1rem;margin:0 0 8px}
 .rulesH{font-size:.92rem;font-weight:600;margin:16px 0 0}
+.lab{font-size:.9rem;color:var(--muted)}
+.stop h2{font-size:1.05rem;margin:0 0 10px}
+.stop h3{font-size:.92rem;margin:18px 0 0}
+.slctl{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.slctl select{max-width:100%;width:100%}
+.stop table td{white-space:normal;vertical-align:top;line-height:1.6}
+.stop table td:first-child,.stop table td:nth-child(2){white-space:nowrap;font-family:var(--mono)}
+.verdict{font-size:1.05rem;font-weight:600;margin:14px 0 10px;line-height:1.6}
+.verdict.warn{color:var(--drop)}
+.sbars{display:flex;flex-direction:column;gap:12px}
+.sbar .cap{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.sbar .stack{display:flex;height:26px;border-radius:5px;overflow:hidden;background:var(--line)}
+.sbar .seg{height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.75rem;color:#fff;white-space:nowrap;overflow:hidden}
+.seg.up,.sw.up{background:var(--goal)} .seg.keep,.sw.keep{background:var(--keep)} .seg.down,.sw.down{background:var(--drop)}
+.sbar .nums{font-family:var(--mono);font-size:.78rem;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8rem;color:var(--muted);margin-top:10px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.explain{font-size:.9rem;line-height:1.75;margin:8px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px}
+.below{font-size:.9rem;line-height:1.75;margin-top:10px}
+.below ul{margin:4px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px}
+.below p{margin:0}
+.stop table tr.basis td{background:color-mix(in srgb,var(--goal) 10%,transparent)}
+.tag{font-weight:700}
+.adv{margin-top:16px}
+.adv summary{cursor:pointer;font-weight:500}
+.slchart svg{width:100%;height:auto;display:block;margin-top:8px}
+.slchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -96,6 +123,7 @@ h2{font-size:1rem;margin:0 0 8px}
       <li>骨龍 +15 以上可以進化為金龍 +10（進化不算一次強化），金龍不能換回骨龍。</li>
       <li>遇到機率活動時，可調整成功率倍率（1～10）：所有成功率未滿 100% 的階段都乘上倍率，超過 100% 時以 100% 計。</li>
       <li>拖動拉桿，查看強化 n 次後停在各等級的機率。</li>
+      <li>止損策略：前 T 次照常強化；第 T 次之後，只要停在起點等級就收手，避免預算用完時停在起點以下。</li>
     </ol>
     <p class="meta">製作日期：2026-11-12・更新日期：2026-11-18</p>
   </header>
@@ -130,6 +158,33 @@ h2{font-size:1rem;margin:0 0 8px}
     <div class="stat"><div class="k" id="kNot"></div><div class="v" id="sNot"></div></div>
     <div class="stat"><div class="k">期望強化次數</div><div class="v" id="sE"></div></div>
     <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
+  </section>
+
+  <section class="panel stop" id="stopPanel">
+    <h2>止損策略</h2>
+    <div class="slctl">
+      <label for="slMode">止損點的決定方式</label><select id="slMode" autocomplete="off">
+        <option value="r50" selected>建議（掉下去時，剩餘次數有 50% 機率爬回起點）</option>
+        <option value="risk">指定可接受的倒退機率</option>
+        <option value="custom">自訂止損次數 T</option></select>
+      <span class="pair" id="slRiskWrap" hidden><label for="slRisk">可接受的倒退機率</label><input type="number" id="slRisk" autocomplete="off" min="0" max="100" step="1" value="10"><span class="lab">%</span></span>
+      <span class="pair" id="slTWrap" hidden><label for="slT">止損次數 T</label><input type="number" id="slT" autocomplete="off" min="0" max="20000" step="1" value="0"></span>
+    </div>
+    <p class="verdict" id="slVerdict"></p>
+    <div id="slBody">
+      <div class="sbars" id="slBars"></div>
+      <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於起點、未達目標）</span><span><i class="sw down"></i>倒退（低於起點）</span></div>
+      <h3 id="slAtTH"></h3>
+      <div class="tblwrap"><table id="slAtT"><thead><tr><th>第 T 次時的等級</th><th>機率</th><th>建議與之後的機率</th></tr></thead><tbody></tbody></table></div>
+      <div class="below" id="slBelow"></div>
+      <h3>策略解讀</h3>
+      <ul class="explain" id="slExplain"></ul>
+      <details class="adv">
+        <summary>參考數據：不同止損次數 T 的比較</summary>
+        <p class="note">怎麼看這張圖：橫軸是止損次數 T（第 T 次之後，只要停在起點就收手），縱軸是用完預算後的結果機率。橘線是「到達目標」，紅線是「倒退」。T 越往右越積極，到達目標的機會增加，但倒退的風險也增加；T 越往左越保守。藍色直線是目前採用的 T，虛線是預設建議的 T。可以用這張圖看「多冒一點倒退風險，能換到多少到達機率」。</p>
+        <div id="slChart" class="slchart"></div>
+      </details>
+    </div>
   </section>
 
   <section class="panel mats">
@@ -339,6 +394,163 @@ function render(){
     const atN=t.cum[n*MAT_ORDER.length+MAT_ORDER.indexOf(m)];
     return "<tr><td>"+m+'</td><td class="now">'+(atN?fmt(atN):"0")+'</td><td class="sum">'+fmt(sum)+"</td>"+(cols.length>1?vals.map(v=>"<td>"+(v?fmt(v):"—")+"</td>").join(""):"")+"</tr>";
   }).join("");
+  renderStop();
+}
+
+
+// ===== 止損策略 =====
+// 前 T 次照常強化（到達目標即停止）；第 T 次之後，只要停在起點等級就收手；高於起點繼續衝，低於起點繼續爬回起點。
+// 結果分三類：0 到達目標、1 維持（不低於起點、未達目標）、2 倒退（低於起點）。骨龍、金龍沿路徑排序：金龍一律高於骨龍。
+let slCache={};
+const rankOf=st=>{ const {eq,lv}=parse(st); return (eq==="gold"?100:0)+lv; };
+function stopLoss(c,n){
+  const ck=[c.part,c.start,c.target,c.evo,c.mult,n].join("|"); if(slCache[ck]) return slCache[ck];
+  slCache={};   // 只保留最近一次的結果
+  const {states,idx,T}=buildChain(c,c.mult), S=states.length, g=idx[c.target];
+  const s0=idx[c.start] ?? idx[key("gold",EVO_TO)];
+  // 只看從起點實際到得了的狀態（例如骨龍 +15 在 +15 進化時，會直接變成金龍 +10，到不了骨龍 +14）
+  const reach=new Array(S).fill(false), stack=[s0]; reach[s0]=true;
+  while(stack.length){ const i=stack.pop(); for(const [j,p] of T[i]) if(p>0&&!reach[j]){ reach[j]=true; stack.push(j); } }
+  const R0=rankOf(states[s0]), below=states.map((st,i)=>reach[i]&&rankOf(st)<R0);
+  const startLab=lab(states[s0])+(idx[c.start]===undefined ? "（"+lab(c.start)+" 在 +"+c.evo+" 進化，會直接變成"+lab(states[s0])+"）" : "");
+  if(!below.some(Boolean)){
+    const eq=parse(states[s0]).eq;
+    return slCache[ck]={na: eq==="bone"
+      ? "骨龍只有強化到 +12、+14、+16、+18、+20 失敗時才會掉級。從 "+startLab+" 出發，失敗時不會掉到起點以下，不需要止損。"
+      : "金龍只有強化到 +15、+17、+19 失敗時才會掉級。從 "+startLab+" 出發，失敗時不會掉到起點以下，不需要止損。"};
+  }
+  const cat=i=> i===g ? 0 : below[i] ? 2 : 1;
+  // 正向：不止損時，第 t 次後停在各狀態的機率
+  const D=new Float64Array((n+1)*S); let v=new Float64Array(S); v[s0]=1;
+  for(let t=0;t<=n;t++){ D.set(v,t*S); const w=new Float64Array(S); for(let i=0;i<S;i++){ const x=v[i]; if(!x) continue; for(const [j,p] of T[i]) w[j]+=x*p; } v=w; }
+  // 反向：剩 r 次時各狀態的結果；R[t] = 第 t 次時的分布 × 剩 n−t 次照規則的結果
+  const R=new Float64Array((n+1)*3);
+  let G=new Float64Array(S*3); for(let i=0;i<S;i++) G[i*3+cat(i)]=1;
+  const comb=(t,Gr)=>{ for(let c3=0;c3<3;c3++){ let x=0; for(let i=0;i<S;i++) x+=D[t*S+i]*Gr[i*3+c3]; R[t*3+c3]=x; } };
+  comb(n,G);
+  for(let r=1;r<=n;r++){ G=stepG(G,T,S,g,s0,true); comb(n-r,G); }
+  // 爬回起點：從起點下一級出發，r 次內回到起點（或更高）的機率首次 ≥ 50% 的 r
+  const {eq:e0,lv:l0}=parse(states[s0]), b=idx[key(e0,l0-1)];
+  let u=new Float64Array(S); u[b]=1; let back=0, r50=null;
+  for(let r=1;r<=200000;r++){
+    const w=new Float64Array(S);
+    for(let i=0;i<S;i++){ const x=u[i]; if(!x) continue; for(const [j,p] of T[i]) w[j]+=x*p; }
+    for(let i=0;i<S;i++) if(!below[i]){ back+=w[i]; w[i]=0; }
+    u=w; if(back>=0.5){ r50=r; break; }
+  }
+  return slCache[ck]={states,idx,T,S,g,s0,below,D,R,r50,b,n,startLab};
+}
+// 剩 r 次的結果：照規則（stop = true，停在起點就收手）或不止損（stop = false）
+function stepG(G,T,S,g,s0,stop){
+  const N=new Float64Array(S*3);
+  for(let i=0;i<S;i++){
+    if(i===g){ N[i*3]=1; continue; }
+    if(stop && i===s0){ N[i*3+1]=1; continue; }
+    for(const [j,p] of T[i]) for(let c3=0;c3<3;c3++) N[i*3+c3]+=p*G[j*3+c3];
+  }
+  return N;
+}
+function resultsAt(sl,r,stop){
+  const {S,g,s0,below,T}=sl; let G=new Float64Array(S*3), prev=null;
+  for(let i=0;i<S;i++) G[i*3+(i===g?0:below[i]?2:1)]=1;
+  for(let k=1;k<=r;k++){ prev=G; G=stepG(G,T,S,g,s0,stop); }
+  return {G,prev};
+}
+function usedAttempts(sl,Ts){
+  const {S,g,s0,T,n}=sl; let v=new Float64Array(S); v[s0]=1; let used=0;
+  for(let t=0;t<n;t++){
+    const w=new Float64Array(S);
+    for(let i=0;i<S;i++){ const x=v[i]; if(!x) continue;
+      if(i===g||(t>=Ts&&i===s0)){ w[i]+=x; continue; }
+      used+=x; for(const [j,p] of T[i]) w[j]+=x*p; }
+    v=w;
+  }
+  return used;
+}
+const pc=x=>(x*100).toFixed(1)+"%";
+const pp=x=>Math.abs(x*100).toFixed(1)+" 個百分點";
+function renderStop(){
+  const n=cur.n, mode=$("slMode").value;
+  $("slRiskWrap").hidden=mode!=="risk"; $("slTWrap").hidden=mode!=="custom";
+  const V=$("slVerdict"), body=$("slBody");
+  if(n===0){ V.className="verdict"; V.textContent="請先用上方的拉桿設定強化次數 n（你準備好的強化材料可以強化幾次）。"; body.hidden=true; return; }
+  const sl=stopLoss(cur,n);
+  if(sl.na){ V.className="verdict"; V.textContent=sl.na; body.hidden=true; return; }
+  body.hidden=false;
+  const R=sl.R, r50=sl.r50, T50=Math.max(0,n-r50);
+  let Ts;
+  if(mode==="r50") Ts=T50;
+  else if(mode==="risk"){ const x=Math.max(0,Math.min(100,+$("slRisk").value||0))/100; Ts=0; for(let t=n;t>=0;t--) if(R[t*3+2]<=x+1e-12){ Ts=t; break; } }
+  else { Ts=Math.max(0,Math.min(n,Math.round(+$("slT").value||0))); }
+  const base=[0,1,2].map(c=>R[n*3+c]), strat=[0,1,2].map(c=>R[Ts*3+c]);
+  const S=sl.startLab, G=lab(cur.target), below=lab(sl.states[sl.b]);
+  if(Ts===0){
+    V.className="verdict warn";
+    V.textContent= mode==="r50"
+      ? "不建議強化：從 "+below+" 爬回 "+S+" 要 "+r50+" 次才有 50% 的機會，但預算只有 "+n+" 次，一掉下去就很難爬回來。"
+      : "止損次數 T = 0：等於一開始就停在 "+S+"，不進行強化。";
+  } else if(Ts>=n){
+    V.className="verdict"; V.textContent="T = "+n+"：等於不止損，用完全部 "+n+" 次。";
+  } else {
+    V.className="verdict";
+    V.textContent = mode==="risk"
+      ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次強化，之後只要停在 "+S+" 就收手；如果那時還在 "+S+" 以下，就繼續強化，爬回 "+S+" 再收手。"
+      : (mode==="r50" ? "建議：" : "自訂：")+"強化到第 "+Ts+" 次後，只要停在 "+S+" 就收手。";
+  }
+  const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
+    [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
+    '</div><div class="nums">到達 '+pc(a[0])+'・維持 '+pc(a[1])+'・倒退 '+pc(a[2])+'</div></div>';
+  $("slBars").innerHTML=bar("用完 "+n+" 次（不止損）",base)+(Ts<n?bar(Ts===0?"不強化（T = 0）":"第 "+Ts+" 次後止損",strat):"");
+  // 第 T 次時的情況
+  const r=n-Ts, used=usedAttempts(sl,Ts);
+  const {G:Gr,prev:Gr1}=resultsAt(sl,r,true), {G:Hr}=resultsAt(sl,r,false);
+  $("slAtTH").textContent="第 "+Ts+" 次時的情況（剩下 "+r+" 次）";
+  const rows=[], ord=[...sl.states.keys()].sort((a,b2)=>rankOf(sl.states[b2])-rankOf(sl.states[a]));
+  for(const i of ord){
+    const pl=sl.D[Ts*sl.S+i]; if(pl<1e-12) continue;
+    const g3=c=>Gr[i*3+c], h3=c=>Hr[i*3+c];
+    let adv, cls="";
+    if(i===sl.g) adv="已到達目標，停止。";
+    else if(i===sl.s0) adv=(Ts<n?"照策略收手，維持 "+S+"。":"")+"若仍繼續用完剩下 "+r+" 次：提升到 "+G+" "+pc(h3(0))+"，維持不低於 "+S+" "+pc(h3(0)+h3(1))+"。";
+    else if(!sl.below[i]) adv="繼續強化，之後若掉回 "+S+" 就收手：提升到 "+G+" "+pc(g3(0))+"，維持不低於 "+S+" "+pc(g3(0)+g3(1))+"。";
+    else { cls="basis"; adv='<span class="tag">萬一在 '+S+' 失敗，會先掉到這裡。</span>繼續強化，爬回 '+S+' 就收手（機率見下方）。'; }
+    rows.push('<tr class="'+cls+'"><td>'+lab(sl.states[i])+"</td><td>"+pc(pl)+"</td><td>"+adv+"</td></tr>");
+  }
+  $("slAtT").tBodies[0].innerHTML=rows.join("");
+  // 第 T 次時如果低於起點
+  const bi=sl.b, backR=1-Gr[bi*3+2];
+  let t='<li><span class="tag">掉到 '+below+'（萬一在 '+S+' 失敗，就是這個處境）：</span>剩下 '+r+' 次內爬回 '+S+' 的機率 '+pc(backR)+'。';
+  if(r>=1){ const back1=1-Gr1[bi*3+2];
+    t+= mode==="r50" ? '<span class="tag">這就是止損點的依據：</span>剩 '+r+' 次時爬回的機會還有一半以上；如果再晚一次才收手（剩 '+(r-1)+' 次），就只剩 '+pc(back1)+'，不到一半。'
+                     : '如果剩 '+(r-1)+' 次，則為 '+pc(back1)+'。'; }
+  const eqb=parse(sl.states[bi]).eq;
+  $("slBelow").innerHTML='<p>第 '+Ts+' 次時如果低於 '+S+'，各種情況爬回 '+S+' 的機率：</p><ul>'+t+'</li><li>'+below+' 強化失敗不會再往下掉，所以最多只會比起點低一級（'+EQ[eqb].name+'只有強化到'+(eqb==="bone"?" +12、+14、+16、+18、+20 ":" +15、+17、+19 ")+'失敗時才會掉級）。</li></ul>';
+  $("slBelow").hidden = Ts>=n;
+  // 策略解讀
+  const ex=[];
+  ex.push("<li>不止損（用完 "+n+" 次）：到達 "+G+" "+pc(base[0])+"、維持 "+pc(base[1])+"、倒退到 "+S+" 以下 "+pc(base[2])+"。</li>");
+  if(Ts<n && Ts>0){
+    ex.push("<li>第 "+Ts+" 次後止損：到達 "+G+" "+pc(strat[0])+"（"+(strat[0]<=base[0]?"減少 ":"增加 ")+pp(strat[0]-base[0])+"）、維持 "+pc(strat[1])+"、倒退 "+pc(strat[2])+"（"+(strat[2]<=base[2]?"減少 ":"增加 ")+pp(strat[2]-base[2])+"）。</li>");
+    ex.push("<li>換句話說：放棄 "+pp(base[0]-strat[0])+" 的到達機會，換到倒退風險減少 "+pp(base[2]-strat[2])+"。</li>");
+    ex.push("<li>止損時平均實際用掉 "+used.toFixed(1)+" 次，剩下的材料可以留到下次。「維持」包含提早收手、沒用完材料的情況。</li>");
+  }
+  if(Ts===0) ex.push("<li>T = 0 表示不進行強化，結果一定是維持在 "+S+"。若仍要強化，請參考上方「用完 "+n+" 次」的結果。</li>");
+  ex.push("<li>預設的 T 怎麼來：萬一在 "+S+" 失敗會掉到 "+below+"，從 "+below+" 要 "+r50+" 次才有 50% 的機會爬回 "+S+"。所以在最後 "+r50+" 次之前（第 "+n+" − "+r50+" = "+T50+" 次後），只要停在 "+S+" 就收手。</li>");
+  ex.push("<li>怎麼選 T：T 越大越積極，越接近「用完全部次數」，到達目標的機會較高，但倒退的風險也較高；T 越小越保守。</li>");
+  ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次強化；「自訂止損次數 T」可以直接試算任何 T。</li>");
+  $("slExplain").innerHTML=ex.join("");
+  drawStopChart(R,n,Ts,T50);
+}
+function drawStopChart(R,n,Ts,T50){
+  const W=640,H=230,L=40,Rr=12,Tp=12,B=28, X=t=>L+(W-L-Rr)*t/n, Y=p=>Tp+(H-Tp-B)*(1-p);
+  const step=Math.max(1,Math.floor(n/320)), line=c=>{ let d=""; for(let t=0;t<=n;t+=step) d+=(d?"L":"M")+X(t).toFixed(1)+","+Y(R[t*3+c]).toFixed(1); d+="L"+X(n).toFixed(1)+","+Y(R[n*3+c]).toFixed(1); return d; };
+  let g="";
+  for(const p of [0,.25,.5,.75,1]) g+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+Y(p)+'" y2="'+Y(p)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(Y(p)+4)+'" text-anchor="end">'+(p*100)+'%</text>';
+  for(const t of [0,Math.round(n/2),n]) g+='<text x="'+X(t)+'" y="'+(H-8)+'" text-anchor="middle">'+t+'</text>';
+  g+='<line x1="'+X(T50)+'" x2="'+X(T50)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-dasharray="4 4"/>';
+  g+='<line x1="'+X(Ts)+'" x2="'+X(Ts)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="var(--bar)" stroke-width="2"/>';
+  g+='<path d="'+line(0)+'" fill="none" stroke="var(--goal)" stroke-width="2"/><path d="'+line(2)+'" fill="none" stroke="var(--bad)" stroke-width="2"/>';
+  $("slChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="不同止損次數 T 的到達與倒退機率">'+g+'</svg>';
 }
 
 // ===== 規則表 =====
@@ -373,6 +585,9 @@ $("start").addEventListener("change",e=>{cur.start=e.target.value; refreshTarget
 $("target").addEventListener("change",e=>{ if(targetAllowed(e.target.value,cur.start)) cur.target=e.target.value; refreshTargets(); render();});
 $("evo").addEventListener("change",e=>{cur.evo=Math.max(+e.target.value,Math.max(EVO_MIN,parse(cur.start).lv)); refreshTargets(); render();});
 $("scale").addEventListener("change",render);
+$("slMode").addEventListener("change",render);
+$("slRisk").addEventListener("input",render);
+$("slT").addEventListener("input",render);
 $("maxN").addEventListener("change",e=>{ $("slider").max=e.target.value; if(cur.n>+e.target.value) setN(+e.target.value); });
 function multHint(){
   const h=$("multHint"); h.className="hint";
@@ -382,7 +597,7 @@ $("mult").addEventListener("input",e=>{
   const v=parseFloat(e.target.value);
   if(!(v>=MULT_MIN && v<=MULT_MAX)){ const h=$("multHint"); h.className="hint bad"; h.textContent="請輸入 "+MULT_MIN+"～"+MULT_MAX+" 之間的數字，目前仍以 ×"+cur.mult+" 計算"; return; }
   const m=Math.round(v*10000)/10000;
-  if(m!==cur.mult){ cur.mult=m; cache={}; renderRules(); render(); }
+  if(m!==cur.mult){ cur.mult=m; cache={}; slCache={}; renderRules(); render(); }
   multHint();
 });
 $("mult").addEventListener("change",()=>{ $("mult").value=cur.mult; multHint(); });
@@ -391,6 +606,7 @@ $("mult").addEventListener("change",()=>{ $("mult").value=cur.mult; multHint(); 
 function syncAll(){
   $("part").value=cur.part; $("start").value=cur.start; refreshTargets();
   $("mult").value=cur.mult; renderRules(); multHint();
+  $("slMode").value="r50"; $("slRisk").value="10"; $("slT").value="0";
   $("slider").max=$("maxN").value;
   setN(cur.n);
 }
