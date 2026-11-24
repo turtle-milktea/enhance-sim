@@ -123,6 +123,12 @@ header .fold.rules{margin-top:10px}
 .conv input{width:8em}
 .convOut{line-height:1.6}
 .convOut b{font-weight:600}
+.luck{grid-column:1/-1;margin:0;line-height:1.6}
+.luck b{font-weight:600}
+.dist h2{font-size:1rem;margin:0 0 6px}
+.distchart svg{width:100%;height:auto;display:block}
+.distchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.distchart .lb{font-family:var(--sans);font-size:11px}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 .stop #slAtT th{white-space:normal;vertical-align:bottom}
 .stop #slAtT th:first-child{min-width:5em}
@@ -192,6 +198,14 @@ header .fold.rules{margin-top:10px}
     <div class="stat"><div class="k" id="kNot"></div><div class="v" id="sNot"></div></div>
     <div class="stat"><div class="k">期望強化次數</div><div class="v" id="sE"></div></div>
     <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
+    <div class="stat"><div class="k">達成 90% 機率所需次數</div><div class="v" id="sQ90"></div></div>
+    <p class="luck" id="luck" hidden></p>
+  </section>
+
+  <section class="panel dist">
+    <h2>要強化幾次才會到達：機率分布</h2>
+    <div id="distChart" class="distchart"></div>
+    <p class="note" id="distNote"></p>
   </section>
 
   <section class="panel stop" id="stopPanel">
@@ -233,7 +247,7 @@ header .fold.rules{margin-top:10px}
   <section class="panel mats">
     <h2 id="matsTitle">材料期望值</h2>
     <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="matsNote">「到第 n 次為止」：強化 n 次時平均已消耗的材料（到達目標後就停止強化，n 夠大時會等於「全部完成」）。進化材料以「n 次內已進化的機率」計入。其餘欄位為從起點到完成的期望值。</p>
+    <p class="matsNote">「到第 n 次為止」：強化 n 次時平均已消耗的材料（到達目標後就停止強化，n 夠大時會等於「全部完成」）。進化材料以「n 次內已進化的機率」計入。其餘欄位為從起點到完成的期望值。「9 成把握要準備」：要有 9 成的機會到達目標，需要準備的材料；每次用量固定的材料是精確值，其他材料標「約」，是依強化次數推算的參考值。</p>
   </section>
 
   <p class="note" id="note">對數橫軸以 10⁻⁶ 為下限。橘色為目標，金色為金龍階段。進化發生在到達進化時機的當下，不佔用強化次數。</p>
@@ -340,7 +354,7 @@ function table(c){
   const {states,idx,T,segs}=buildChain(c,c.mult), S=states.length, g=idx[c.target], s0=idx[c.start] ?? idx[key("gold",EVO_TO)];
   // 逐次推算 0..MAXN 次後的分布
   const out=new Float64Array((MAXN+1)*S); let v=new Float64Array(S); v[s0]=1;
-  let med=null;
+  let med=null, q90=null, q99=null;
   // 到第 n 次為止的材料消耗期望值：前 n 次強化各自的消耗，加上「n 次內已進化的機率 × 進化材料」
   const MK=MAT_ORDER.length, cost=MAT_ORDER.map(()=>new Float64Array(S)), goldIdx=[];
   states.forEach((st,i)=>{ const {eq,lv}=parse(st); if(eq==="gold") goldIdx.push(i); if(i===g) return;
@@ -350,6 +364,8 @@ function table(c){
   for(let n=0;n<=MAXN;n++){
     out.set(v,n*S);
     if(med===null && v[g]>0.5) med=n;
+    if(q90===null && v[g]>=0.9) q90=n;
+    if(q99===null && v[g]>=0.99) q99=n;
     let pe=0; if(segs.length===2) for(const i of goldIdx) pe+=v[i];
     for(let a=0;a<MK;a++){ cum[n*MK+a]=run[a]+pe*evoAmt[a]; let t=0; const ca=cost[a]; for(let i=0;i<S;i++) if(ca[i]) t+=v[i]*ca[i]; run[a]+=t; }
     const w=new Float64Array(S);
@@ -370,7 +386,7 @@ function table(c){
   states.forEach((s,i)=>{ if(i===g||!visits[i]) return; const {eq,lv}=parse(s);
     for(const [m,arr] of Object.entries(EQ[eq].mat[c.part])) if(arr[lv+1]) mats[eq][m]=(mats[eq][m]||0)+visits[i]*arr[lv+1]; });
   if(segs.length===2) for(const [m,q] of Object.entries(EVOLVE)) mats.evo[m]=q;
-  return cache[ck]={states,out,S,g,med,E,mats,cum,visits,evolves:segs.length===2};
+  return cache[ck]={states,out,S,g,med,q90,q99,E,mats,cum,visits,evolves:segs.length===2};
 }
 
 // ===== 選單 =====
@@ -426,21 +442,59 @@ function render(){
   $("kNot").textContent="尚未到達 "+lab(cur.target); $("sNot").textContent=pct(1-hit);
   $("sE").textContent=t.E.toFixed(3);
   $("sMed").textContent=t.med!==null?t.med:"> "+MAXN;
+  $("sQ90").textContent=t.q90!==null?t.q90:"> "+MAXN;
+  // 運氣：強化了 n 次還沒到的人有多少
+  const L=$("luck"), notYet=1-hit; L.hidden=!(n>0&&notYet>0.0005&&t.g!==undefined&&t.E>0);
+  if(!L.hidden) L.innerHTML="強化了 "+n+" 次還沒到 "+lab(cur.target)+" 的人，100 個人裡大約有 <b>"+(notYet*100<1?"不到 1":Math.round(notYet*100))+"</b> 個。"
+    +(notYet<0.1?"如果你是其中一個，代表運氣比 9 成的人差。":notYet<0.5?"":"還沒到的人比到了的人多，不用太擔心。");
+  drawDist(t,n);
   // 材料表
   $("matsTitle").textContent="材料期望值（"+($("part").value==="armor"?"防具":"武器")+"）";
   const cols=[["骨龍強化","bone"],["進化","evo"],["金龍強化","gold"]].filter(([,k])=>Object.keys(t.mats[k]).length || (k==="evo"&&t.evolves));
   const used=MAT_ORDER.filter(m=>cols.some(([,k])=>t.mats[k][m]));
   const tbl=$("mats");
-  tbl.tHead.innerHTML="<tr><th>材料</th><th>到第 "+n+" 次為止</th><th>全部完成</th>"+(cols.length>1?cols.map(([h])=>"<th>"+h+"</th>").join(""):"")+"</tr>";
+  const q90=t.q90, k90=(q90!==null&&t.E>0)?q90/t.E:null;
+  // 每次用量固定的材料，9 成把握的數量是精確的；其他材料依「總次數 → 各級次數」估算
+  const constM=m=>{ if(t.evolves) return false; let c=null;
+    for(let i=0;i<t.S;i++){ if(i===t.g||!(t.visits[i]>1e-12)) continue; const {eq,lv}=parse(t.states[i]); const x=(EQ[eq].mat[cur.part][m]||[])[lv+1]||0;
+      if(c===null) c=x; else if(x!==c) return false; } return true; };
+  tbl.tHead.innerHTML="<tr><th>材料</th><th>到第 "+n+" 次為止</th><th>全部完成</th><th>9 成把握要準備</th>"+(cols.length>1?cols.map(([h])=>"<th>"+h+"</th>").join(""):"")+"</tr>";
   tbl.tBodies[0].innerHTML=used.map(m=>{
     const vals=cols.map(([,k])=>t.mats[k][m]||0), sum=vals.reduce((a,b)=>a+b,0);
     const atN=t.cum[n*MAT_ORDER.length+MAT_ORDER.indexOf(m)];
-    return "<tr><td>"+m+'</td><td class="now">'+(atN?fmt(atN):"0")+'</td><td class="sum">'+fmt(sum)+"</td>"+(cols.length>1?vals.map(v=>"<td>"+(v?fmt(v):"—")+"</td>").join(""):"")+"</tr>";
+    const enh=(t.mats.bone[m]||0)+(t.mats.gold[m]||0), p90=k90===null?null:enh*k90+(t.mats.evo[m]||0);
+    return "<tr><td>"+m+'</td><td class="now">'+(atN?fmt(atN):"0")+'</td><td class="sum">'+fmt(sum)+"</td><td>"+(p90===null?"—":(constM(m)?"":"約 ")+fmt(p90))+"</td>"+(cols.length>1?vals.map(v=>"<td>"+(v?fmt(v):"—")+"</td>").join(""):"")+"</tr>";
   }).join("");
   renderConv(t);
   renderStop();
 }
 
+
+// ===== 機率分布：剛好在第 k 次到達目標的機率 =====
+function drawDist(t,n){
+  const g=t.g, S=t.S, hitAt=k=>t.out[k*S+g], el=$("distChart"), note=$("distNote");
+  if(!(t.E>0)||t.med===null){ el.innerHTML=""; note.textContent=t.E>0?"":"已經在目標，不需要強化。"; return; }
+  const K=Math.min(MAXN,Math.max(t.q99??MAXN,n,10));
+  const step=Math.max(1,Math.ceil(K/300)), pts=[]; let ymax=0;
+  for(let k=1;k<=K;k+=step){ const k2=Math.min(K,k+step-1); const p=(hitAt(k2)-hitAt(k-1))/(k2-k+1); pts.push([(k+k2)/2,p]); ymax=Math.max(ymax,p); }
+  const W=640,H=220,Lf=46,Rr=12,Tp=22,B=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-B)*(1-p/(ymax*1.08));
+  let dn="M"+X(0)+","+Y(0);
+  for(const [k,p] of pts) if(k<=n) dn+="L"+X(k).toFixed(1)+","+Y(p).toFixed(1);
+  const lastIn=pts.filter(([k])=>k<=n).pop();
+  dn+= lastIn?"L"+X(Math.min(n,lastIn[0])).toFixed(1)+","+Y(0):"";
+  const yt=v=>{ const x=v*100; return (x>=1?x.toFixed(1):x>=0.1?x.toFixed(2):x.toFixed(3))+"%"; };
+  let gs="";
+  for(const f of [0,.5,1]){ const v=ymax*1.08*f; gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(Lf-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+yt(v)+'</text>'; }
+  for(const k of [0,Math.round(K/2),K]) gs+='<text x="'+X(k)+'" y="'+(H-8)+'" text-anchor="middle">'+k+'</text>';
+  gs+='<path d="'+dn+'Z" fill="var(--goal)" opacity=".28"/>';
+  gs+='<path d="'+pts.map(([k,p],j)=>(j?"L":"M")+X(k).toFixed(1)+","+Y(p).toFixed(1)).join("")+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
+  const vline=(k,txt,col,dash,dy)=>'<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="'+col+'"'+(dash?' stroke-dasharray="4 4"':' stroke-width="2"')+'/><text class="lb" x="'+(X(k)+4)+'" y="'+(Tp-8+dy)+'" fill="'+col+'">'+txt+'</text>';
+  gs+=vline(t.med,"一半："+t.med,"var(--muted)",true,0);
+  if(t.q90!==null&&t.q90<=K) gs+=vline(t.q90,"9 成："+t.q90,"var(--muted)",true,0);
+  if(n>0) gs+=vline(Math.min(n,K),"你：n = "+n,"var(--bar)",false,14);
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾次強化時到達目標的機率">'+gs+'</svg>';
+  note.textContent="橫軸是強化次數，縱軸是「剛好在這一次到達目標」的機率。曲線越高，代表越多人剛好在那一次到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。虛線標出「一半的人」和「9 成的人」在這之前到達的次數；藍線是你設定的 n，藍線左邊塗色的面積，就是 n 次內到達的機率（"+pct(hitAt(Math.min(n,MAXN)))+"）。";
+}
 
 // ===== 用材料換算強化次數 =====
 // 骨龍看古代龍的骨頭碎片、金龍看金龍的寶玉碎片：+10 以上（金龍 +6 以上）每次用量固定，可以直接除；
