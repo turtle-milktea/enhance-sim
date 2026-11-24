@@ -387,7 +387,7 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
   const wB=Math.min(0.999,Fb(n)), nA=n>0?needAt(Fa,wB):null;
   $("evtSum").textContent = n>0
     ? head+"時：用你設定的 "+n+" "+o.u+"，到達的機率從原本 1 倍的 "+pc1(Fa(n))+" 提高到 "+pc1(Fb(n))
-      +"；同樣 "+pc1(wB)+" 的機率，原本 1 倍要"+o.verb+" "+(nA===null?"超過 "+MAXN.toLocaleString("en-US"):nA.toLocaleString("en-US"))+" "+o.u+(nA!==null&&nA>n?"，少"+o.verb+" "+(nA-n).toLocaleString("en-US")+" "+o.u:"")
+      +"；同樣 "+pc1(wB)+" 的機率，比較原本 1 倍要"+o.verb+" "+(nA===null?"超過 "+MAXN.toLocaleString("en-US"):nA.toLocaleString("en-US"))+" "+o.u+(nA!==null&&nA>n?"，現在可以少"+o.verb+" "+(nA-n).toLocaleString("en-US")+" "+o.u:"")
     : head+"時：一半的人 "+qb.q50+" "+o.u+"內到達（原本 1 倍要 "+qa.q50+" "+o.u+"）";
   const K=Math.max(qa.K,n,10), step=Math.max(1,Math.ceil(K/300));
   const W=640,H=210,Lf=40,Rr=12,Tp=12,Bm=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-Bm)*(1-p);
@@ -408,7 +408,7 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
       gs+='<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Y(w)+'" y2="'+(H-Bm)+'" stroke="'+col+'" stroke-dasharray="2 3"/><circle cx="'+X(k)+'" cy="'+Y(w)+'" r="4" fill="'+col+'"/><text class="lb" x="'+(X(k)+5)+'" y="'+(Y(w)+dy)+'" fill="'+col+'">'+k+' '+o.u+'</text>';
     const f=x=>x===null?"超過 "+MAXN.toLocaleString("en-US")+" "+o.u:"<b>"+x.toLocaleString("en-US")+" "+o.u+"</b>";
     const pw=(w*100).toFixed(1)+"%", who=(ev?"活動 1.3 倍":"倍率 "+m2+" 倍"), save=(na!==null&&nb!==null)?na-nb:null;
-    const saveTxt = save===null ? "" : "，少"+o.verb+" <b>"+save.toLocaleString("en-US")+" "+o.u+"</b>"+(o.u==="次"?"（省下 "+save.toLocaleString("en-US")+" 次份的材料）":"");
+    const saveTxt = save===null ? "" : "，現在可以少"+o.verb+" <b>"+save.toLocaleString("en-US")+" "+o.u+"</b>"+(o.u==="次"?"（省下 "+save.toLocaleString("en-US")+" 次份的材料）":"");
     $("evtNeed").innerHTML = (!manual&&n>0)
       ? "用你設定的 "+n+" "+o.u+"："+who+"有 "+pw+" 的機會到達；原本 1 倍要"+o.verb+" "+f(na)+"才有同樣的機會"+saveTxt+"。"
       : "想要有 "+pw+" 的機會到達：原本 1 倍要"+o.verb+" "+f(na)+"，"+who+"要"+o.verb+" "+f(nb)+saveTxt+"。"; }
