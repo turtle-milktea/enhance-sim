@@ -532,8 +532,11 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
   const ev=m2===1.3, nm= ev ? "活動（1.3 倍）" : "倍率 "+m2+" 倍", head=nm.replace(/[（）]/g," ").trim();
   $("evtLegB").textContent=nm;
   const pc1=x=>(x*100).toFixed(1)+"%";
+  const needAt=(f,w)=>{ for(let k=0;k<=MAXN;k++) if(f(k)>=w-1e-12) return k; return null; };
+  const wB=Math.min(0.999,Fb(n)), nA=n>0?needAt(Fa,wB):null;
   $("evtSum").textContent = n>0
     ? head+"時：用你設定的 "+n+" "+o.u+"，到達的機率從原本 1 倍的 "+pc1(Fa(n))+" 提高到 "+pc1(Fb(n))
+      +"；同樣 "+pc1(wB)+" 的機率，原本 1 倍要"+o.verb+" "+(nA===null?"超過 "+MAXN.toLocaleString("en-US"):nA.toLocaleString("en-US"))+" "+o.u+(nA!==null&&nA>n?"，少"+o.verb+" "+(nA-n).toLocaleString("en-US")+" "+o.u:"")
     : head+"時：一半的人 "+qb.q50+" "+o.u+"內到達（原本 1 倍要 "+qa.q50+" "+o.u+"）";
   const K=Math.max(qa.K,n,10), step=Math.max(1,Math.ceil(K/300));
   const W=640,H=210,Lf=40,Rr=12,Tp=12,Bm=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-Bm)*(1-p);
@@ -544,9 +547,9 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
   gs+='<path d="'+path(Fa)+'" fill="none" stroke="var(--muted)" stroke-width="2"/><path d="'+path(Fb)+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
   if(n>0&&n<=K) gs+='<line x1="'+X(n)+'" x2="'+X(n)+'" y1="'+Tp+'" y2="'+(H-Bm)+'" stroke="var(--bar)" stroke-width="2"/><text class="lb" x="'+(X(n)+4)+'" y="'+(Tp+12)+'" fill="var(--bar)">你：n = '+n+'</text>';
   // 想要的機率：兩條曲線各自在第幾箱達到這個機率
-  // 想要的機率：預設是「原本 1 倍強化 n 次」的機率，跟著 n 走；玩家自己輸入後，設定沒變之前都用輸入的值
+  // 想要的機率：預設是「活動倍率強化 n 次」的機率（藍線與橘線的交點），跟著 n 走；玩家自己輸入後，設定沒變之前都用輸入的值
   { const el=$("evtP"), sig=JSON.stringify(cur), manual=el.dataset.sig===sig&&el.value.trim()!=="";
-    let w = manual ? Math.max(0.1,Math.min(99.9,+el.value||50))/100 : (n>0 ? Fa(n) : 0.5);
+    let w = manual ? Math.max(0.1,Math.min(99.9,+el.value||50))/100 : (n>0 ? Fb(n) : 0.5);
     w=Math.max(0.001,Math.min(0.999,w)); if(!manual){ el.value=String(Math.round(w*1000)/10); el.dataset.sig=""; }
     const need=f=>{ for(let k=0;k<=MAXN;k++) if(f(k)>=w-1e-12) return k; return null; }, na=need(Fa), nb=need(Fb);
     gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(w)+'" y2="'+Y(w)+'" stroke="var(--fg)" stroke-dasharray="3 3" opacity=".6"/>';
@@ -556,7 +559,7 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
     const pw=(w*100).toFixed(1)+"%", who=(ev?"活動 1.3 倍":"倍率 "+m2+" 倍"), save=(na!==null&&nb!==null)?na-nb:null;
     const saveTxt = save===null ? "" : "，少"+o.verb+" <b>"+save.toLocaleString("en-US")+" "+o.u+"</b>"+(o.u==="次"?"（省下 "+save.toLocaleString("en-US")+" 次份的材料）":"");
     $("evtNeed").innerHTML = (!manual&&n>0)
-      ? "用你設定的 "+n+" "+o.u+"：原本 1 倍有 "+pw+" 的機會到達；"+who+"只要"+o.verb+" "+f(nb)+"就有同樣的機會"+saveTxt+"。"
+      ? "用你設定的 "+n+" "+o.u+"："+who+"有 "+pw+" 的機會到達；原本 1 倍要"+o.verb+" "+f(na)+"才有同樣的機會"+saveTxt+"。"
       : "想要有 "+pw+" 的機會到達：原本 1 倍要"+o.verb+" "+f(na)+"，"+who+"要"+o.verb+" "+f(nb)+saveTxt+"。"; }
   $("evtChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="原本與'+nm+'在 n '+o.u+'內到達的機率">'+gs+'</svg>';
   $("evtNote").innerHTML=["<b>橫軸</b>："+o.x+"。",
