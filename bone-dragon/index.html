@@ -239,9 +239,9 @@ header .fold.rules{margin-top:10px}
       <div class="sbars" id="slBars"></div>
       <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於起點、未達目標）</span><span><i class="sw down"></i>倒退（低於起點）</span></div>
       <div id="slMatsWrap">
-        <h3>平均會用掉的材料</h3>
+        <h3 id="slEndH">照建議強化，最後會怎麼結束</h3>
         <div class="tblwrap mats"><table id="slMats"><thead></thead><tbody></tbody></table></div>
-        <p class="matsNote">見好就收時沒用完的材料，可以留到下次再用。</p>
+        <ul class="matsNote distlist" id="slEndNote"></ul>
       </div>
       <h3 id="slAtTH"></h3>
       <div class="tblwrap"><table id="slAtT"><thead><tr><th>收手那一刻的等級</th><th>機率</th><th>接下來怎麼做（建議與止損線之後的機率）</th></tr></thead><tbody></tbody></table></div>
@@ -688,26 +688,20 @@ function countHint(sl,Ts){
     ? "把用掉的"+BONE+"除以 "+b+"；如果已經進化，再加上用掉的"+GOLD+"扣掉進化用的 "+ev+" 個後除以 "+g+"。加起來是 <b>"+Ts+"</b>"
     : "把用掉的"+GOLD+"扣掉進化用的 "+ev+" 個後除以 "+g+"，得到 <b>"+Ts+"</b>")+"，就是第 "+Ts+" 次。";
 }
-// 照止損規則（第 Ts 次後停在起點就收手）用完 n 次時，平均用掉的強化次數與各材料；Ts = n 即不止損
-function stopMats(sl,Ts){
-  const {S,g,s0,T,n,states}=sl, MK=MAT_ORDER.length, cost=MAT_ORDER.map(()=>new Float64Array(S));
-  states.forEach((st,i)=>{ if(i===g) return; const {eq,lv}=parse(st);
-    MAT_ORDER.forEach((m,a)=>{ const arr=EQ[eq].mat[cur.part][m]; if(arr&&arr[lv+1]) cost[a][i]=arr[lv+1]; }); });
-  let v=new Float64Array(S); v[s0]=1; let used=0; const tot=new Float64Array(MK);
-  for(let t=0;t<n;t++){
+// 照止損規則強化時，三種結束方式各自的機率與平均用掉的次數：
+// 0 衝上目標提前結束、1 第 Ts 次後回到起點收手、2 n 次全部用完
+function endModes(sl,Ts){
+  const {S,g,s0,T,n}=sl, P=[0,0,0], U=[0,0,0];
+  let v=new Float64Array(S); v[s0]=1;
+  for(let t=0;t<=n;t++){
+    if(v[g]){ P[0]+=v[g]; U[0]+=v[g]*t; v[g]=0; }
+    if(t>=Ts&&t<n&&v[s0]){ P[1]+=v[s0]; U[1]+=v[s0]*t; v[s0]=0; }
+    if(t===n){ let r=0; for(let i=0;i<S;i++) r+=v[i]; P[2]+=r; U[2]+=r*n; break; }
     const w=new Float64Array(S);
-    for(let i=0;i<S;i++){ const x=v[i]; if(!x) continue;
-      if(i===g||(t>=Ts&&i===s0)){ w[i]+=x; continue; }
-      used+=x; for(let a=0;a<MK;a++) if(cost[a][i]) tot[a]+=x*cost[a][i];
-      for(const [j,p] of T[i]) w[j]+=x*p; }
+    for(let i=0;i<S;i++){ const x=v[i]; if(!x) continue; for(const [j,p] of T[i]) w[j]+=x*p; }
     v=w;
   }
-  // 進化材料：骨龍出發、目標是金龍時，結束時已經是金龍的機率 × 進化材料
-  if(parse(cur.start).eq==="bone" && parse(cur.target).eq==="gold"){
-    let pe=0; states.forEach((st,i)=>{ if(parse(st).eq==="gold") pe+=v[i]; });
-    MAT_ORDER.forEach((m,a)=>{ if(EVOLVE[m]) tot[a]+=pe*EVOLVE[m]; });
-  }
-  return {used,tot};
+  return {P,avg:U.map((u,k)=>P[k]>0?u/P[k]:null)};
 }
 function usedAttempts(sl,Ts){
   const {S,g,s0,T,n}=sl; let v=new Float64Array(S); v[s0]=1; let used=0;
@@ -758,12 +752,16 @@ function renderStop(){
   // 第 T 次時的情況
   const r=n-Ts, used=usedAttempts(sl,Ts);
   // 材料表：不止損 vs 照策略
-  $("slMatsWrap").hidden = Ts>=n;
-  if(Ts<n){
-    const A=stopMats(sl,n), B=stopMats(sl,Ts), f=x=>x>=1e-9?fmt(x):"0";
-    const rowsM=[["強化次數",A.used,B.used]].concat(MAT_ORDER.map((m,a)=>[m,A.tot[a],B.tot[a]]).filter(([,x])=>x>1e-9));
-    $("slMats").tHead.innerHTML="<tr><th>材料</th><th>不止損</th><th>"+(Ts===0?"不強化":"見好就收")+"</th><th>少用</th></tr>";
-    $("slMats").tBodies[0].innerHTML=rowsM.map(([m,x,y])=>"<tr><td>"+m+"</td><td>"+f(x)+'</td><td class="now">'+f(y)+"</td><td>"+f(x-y)+"</td></tr>").join("");
+  // 最後會怎麼結束：三種結束方式的機率、用掉的次數、沒用到的次數
+  $("slMatsWrap").hidden = !(Ts>0&&Ts<n);
+  if(Ts>0&&Ts<n){
+    const em=endModes(sl,Ts), f1=x=>(Math.round(x*10)/10).toLocaleString("en-US");
+    $("slEndH").textContent=(mode==="r50"?"照建議強化":"照這個止損點強化")+"，最後會怎麼結束";
+    const rowsE=[["衝上目標，提前結束",em.P[0],em.avg[0]],["第 "+Ts+" 次後回到 "+S+"，收手",em.P[1],em.avg[1]],[n+" 次全部用完，還沒到達目標",em.P[2],em.avg[2]]];
+    $("slMats").tHead.innerHTML="<tr><th>怎麼結束</th><th>這樣結束的機率</th><th>用掉的次數</th><th>沒用到、可以留著的</th></tr>";
+    $("slMats").tBodies[0].innerHTML=rowsE.map(([lb,p,a],k)=>"<tr><td>"+lb+"</td><td>"+pc(p)+"</td><td>"+(a===null?"—":k===2?n+" 次":"平均 "+f1(a)+" 次")+"</td><td>"+(a===null||k===2?"—":"平均 "+f1(n-a)+" 次份")+"</td></tr>").join("");
+    $("slEndNote").innerHTML=["三種結束方式的機率加起來是 100%。第一列就是上方長條圖的「到達」。",
+      "止損只會影響第二種結束方式，最多省下 "+n+" − "+Ts+" = "+(n-Ts)+" 次的材料。止損主要的好處是降低倒退的機率，不是省材料。"].map(x=>"<li>"+x+"</li>").join("");
   }
   const {G:Gr,prev:Gr1}=resultsAt(sl,r,true), {G:Hr}=resultsAt(sl,r,false);
   $("slAtTH").textContent="第 "+Ts+" 次時的情況（剩下 "+r+" 次）";
