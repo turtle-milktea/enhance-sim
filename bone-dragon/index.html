@@ -514,8 +514,8 @@ function drawEvent(){
   $("evtLegB").textContent=nm;
   const F=t=>k=>t.out[Math.min(k,MAXN)*t.S+t.g], pc1=x=>(x*100).toFixed(1)+"%";
   $("evtSum").textContent = n>0
-    ? nm.replace(/[（）]/g," ").trim()+"時：用你設定的 "+n+" 次，到達的機率從 "+pc1(F(a)(n))+" 提高到 "+pc1(F(b)(n))
-    : nm.replace(/[（）]/g," ").trim()+"時：一半的人 "+b.med+" 次內到達（平常要 "+a.med+" 次）";
+    ? nm.replace(/[（）]/g," ").trim()+"時：用你設定的 "+n+" 次，到達的機率從原本 1 倍的 "+pc1(F(a)(n))+" 提高到 "+pc1(F(b)(n))
+    : nm.replace(/[（）]/g," ").trim()+"時：一半的人 "+b.med+" 次內到達（原本 1 倍要 "+a.med+" 次）";
   const K=Math.min(MAXN,Math.max(a.q99??MAXN,n,10)), step=Math.max(1,Math.ceil(K/300));
   const W=640,H=210,Lf=40,Rr=12,Tp=12,Bm=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-Bm)*(1-p);
   const path=f=>{ let d=""; for(let k=0;k<=K;k+=step) d+=(d?"L":"M")+X(k).toFixed(1)+","+Y(f(k)).toFixed(1); return d+"L"+X(K).toFixed(1)+","+Y(f(K)).toFixed(1); };
