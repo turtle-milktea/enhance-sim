@@ -528,7 +528,12 @@ function drawEventBone(){
     {x:"強化次數",u:"次",verb:"強化",why:"<b>為什麼省得比 30% 還多</b>：成功率提高的同時，失敗倒退的次數也跟著變少。",why2:"<b>為什麼省得比倍率看起來還多</b>：成功率提高的同時，失敗倒退的次數也跟著變少。"});
 }
 function drawEvent(Fa,Fb,qa,qb,m2,n,o){
-  const wrap=$("evtWrap"); wrap.hidden=false;
+  const wrap=$("evtWrap");
+  // 倍率完全不影響結果時（例如只有進化、或全部是 100% 成功的階段），不顯示比較
+  { const Kc=Math.max(qa.K,n,10), st=Math.max(1,Math.ceil(Kc/400)); let same=true;
+    for(let k=0;k<=Kc&&same;k+=st) if(Math.abs(Fa(k)-Fb(k))>1e-9) same=false;
+    if(same&&Math.abs(Fa(n)-Fb(n))<=1e-9){ wrap.hidden=true; return; } }
+  wrap.hidden=false;
   const ev=m2===1.3, nm= ev ? "活動（1.3 倍）" : "倍率 "+m2+" 倍", head=nm.replace(/[（）]/g," ").trim();
   $("evtLegB").textContent=nm;
   const pc1=x=>(x*100).toFixed(1)+"%";
