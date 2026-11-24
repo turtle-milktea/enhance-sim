@@ -125,6 +125,8 @@ header .fold.rules{margin-top:10px}
 .convOut b{font-weight:600}
 .luck{grid-column:1/-1;margin:0;line-height:1.6}
 .luck b{font-weight:600}
+.distlist{margin:8px 0 0;padding-left:1.3em;line-height:1.6}
+.distlist li{margin:2px 0}
 .dist h2{font-size:1rem;margin:0 0 6px}
 .distchart svg{width:100%;height:auto;display:block}
 .distchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
@@ -205,7 +207,7 @@ header .fold.rules{margin-top:10px}
   <section class="panel dist">
     <h2>要強化幾次才會到達：機率分布</h2>
     <div id="distChart" class="distchart"></div>
-    <p class="note" id="distNote"></p>
+    <ul class="note distlist" id="probNote"></ul>
   </section>
 
   <section class="panel stop" id="stopPanel">
@@ -473,7 +475,7 @@ function render(){
 
 // ===== 機率分布：剛好在第 k 次到達目標的機率 =====
 function drawDist(t,n){
-  const g=t.g, S=t.S, hitAt=k=>t.out[k*S+g], el=$("distChart"), note=$("distNote");
+  const g=t.g, S=t.S, hitAt=k=>t.out[k*S+g], el=$("distChart"), note=$("probNote");
   if(!(t.E>0)||t.med===null){ el.innerHTML=""; note.textContent=t.E>0?"":"已經在目標，不需要強化。"; return; }
   const K=Math.min(MAXN,Math.max(t.q99??MAXN,n,10));
   const step=Math.max(1,Math.ceil(K/300)), pts=[]; let ymax=0;
@@ -496,7 +498,11 @@ function drawDist(t,n){
   if(t.q90!==null&&t.q90<=K) gs+=vline(t.q90,"9 成："+t.q90,"var(--muted)",true,12);
   if(n>0) gs+=vline(Math.min(n,K),"你：n = "+n,"var(--bar)",false,Tp+12);
   el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾次強化時到達目標的機率">'+gs+'</svg>';
-  note.textContent="橫軸是強化次數，縱軸是「剛好在這一次到達目標」的機率。曲線越高，代表越多人剛好在那一次到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。三條虛線由左到右，分別是「1 成的人」「一半的人」「9 成的人」在這之前就到達的次數；藍線是你設定的 n，藍線左邊塗色的面積，就是 n 次內到達的機率（"+pct(hitAt(Math.min(n,MAXN)))+"）。";
+  note.innerHTML=["<b>橫軸</b>：強化次數。",
+    "<b>縱軸</b>：剛好在這一次到達目標的機率。曲線越高，代表越多人剛好在那一次到達。",
+    "<b>曲線的形狀</b>：左邊是運氣好、很快就到的人；右邊拖得很長的，是運氣差的人。",
+    "<b>三條虛線</b>（由左到右）：1 成、一半、9 成的人，在這之前就到達的次數。",
+    "<b>藍線</b>：你設定的 n。藍線左邊塗色的面積，就是 n 次內到達的機率（"+(hitAt(Math.min(n,MAXN))*100).toFixed(2)+"%）。"].map(x=>"<li>"+x+"</li>").join("");
 }
 
 // ===== 用材料換算強化次數 =====

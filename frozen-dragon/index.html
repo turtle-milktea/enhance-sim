@@ -83,6 +83,8 @@ header .fold.rules{margin-top:10px}
 .count b{font-weight:600}
 .luck{grid-column:1/-1;margin:0;line-height:1.6}
 .luck b{font-weight:600}
+.distlist{margin:8px 0 0;padding-left:1.3em;line-height:1.6}
+.distlist li{margin:2px 0}
 .dist h2{font-size:1rem;margin:0 0 6px}
 .distchart svg{width:100%;height:auto;display:block}
 .distchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
@@ -185,7 +187,7 @@ td.dropcell{color:var(--bad);font-weight:500}
   <section class="panel dist" id="distPanel">
     <h2>要強化幾次才會到達：機率分布</h2>
     <div id="distChart" class="distchart"></div>
-    <p class="note" id="distNote"></p>
+    <ul class="note distlist" id="probNote"></ul>
   </section>
 
   <section class="panel stop" id="stopPanel">
@@ -305,7 +307,7 @@ function table(start,T,m){
 // ===== 機率分布：剛好在第 k 次到達目標的機率 =====
 // F(k)：k 次內到達的機率；o = {K 橫軸上限, q10, q50, q90, n, x 橫軸名稱, at 「這一次」, u 單位}
 function drawDist(F,o){
-  const el=$("distChart"), note=$("distNote"), K=Math.max(10,o.K), n=o.n;
+  const el=$("distChart"), note=$("probNote"), K=Math.max(10,o.K), n=o.n;
   const step=Math.max(1,Math.ceil(K/300)), pts=[]; let ymax=0;
   for(let k=1;k<=K;k+=step){ const k2=Math.min(K,k+step-1); const p=(F(k2)-F(k-1))/(k2-k+1); pts.push([(k+k2)/2,p]); ymax=Math.max(ymax,p); }
   if(!(ymax>0)){ el.innerHTML=""; note.textContent=""; $("distPanel").hidden=true; return; }
@@ -327,7 +329,11 @@ function drawDist(F,o){
   if(o.q90!=null&&o.q90<=K) gs+=vline(o.q90,"9 成："+f(o.q90),"var(--muted)",true,12);
   if(n>0) gs+=vline(Math.min(n,K),"你：n = "+f(n),"var(--bar)",false,Tp+12);
   el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾'+o.u+'到達目標的機率">'+gs+'</svg>';
-  note.textContent="橫軸是"+o.x+"，縱軸是「剛好在"+o.at+"到達目標」的機率。曲線越高，代表越多人剛好在那"+o.u+"到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。三條虛線由左到右，分別是「1 成的人」「一半的人」「9 成的人」在這之前就到達的"+o.x+"；藍線是你設定的 n，藍線左邊塗色的面積，就是 n "+o.u+"內到達的機率（"+pct(F(Math.min(n,K)))+"）。";
+  note.innerHTML=["<b>橫軸</b>："+o.x+"。",
+    "<b>縱軸</b>：剛好在"+o.at+"到達目標的機率。曲線越高，代表越多人剛好在那"+o.u+"到達。",
+    "<b>曲線的形狀</b>：左邊是運氣好、很快就到的人；右邊拖得很長的，是運氣差的人。",
+    "<b>三條虛線</b>（由左到右）：1 成、一半、9 成的人，在這之前就到達的"+(o.cnt||"次數")+"。",
+    "<b>藍線</b>：你設定的 n。藍線左邊塗色的面積，就是 n "+o.u+"內到達的機率（"+(F(Math.min(n,K))*100).toFixed(2)+"%）。"].map(x=>"<li>"+x+"</li>").join("");
 }
 // 運氣：做了 n 次還沒到的人有多少
 function showLuck(prefix,notYet,show){
