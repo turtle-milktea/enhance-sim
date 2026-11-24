@@ -241,7 +241,7 @@ header .fold.rules{margin-top:10px}
     <div id="slBody">
       <p class="benefit" id="slBenefit" hidden></p>
       <div class="sbars" id="slBars"></div>
-      <div class="legend"><span><i class="sw up"></i>到達目標</span><span><i class="sw keep"></i>維持（不低於保底、未達目標）</span><span><i class="sw down"></i>倒退（低於保底）</span></div>
+      <div class="legend"><span><i class="sw up"></i>達成目標</span><span><i class="sw keep"></i>維持（不低於保底、未達目標）</span><span><i class="sw down"></i>倒退（低於保底）</span></div>
       <h3 id="slAtTH"></h3>
       <div class="tblwrap"><table id="slAtT"><thead><tr><th>收手那一刻的結果</th><th>機率</th><th>接下來怎麼做（建議與止損線之後的機率）</th></tr></thead><tbody></tbody></table></div>
       <div class="below" id="slBelow"></div>
@@ -260,13 +260,13 @@ header .fold.rules{margin-top:10px}
   <section class="panel">
     <h2 id="matsTitle">材料期望值</h2>
     <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody></table></div>
-    <p class="note" style="margin-top:8px;font-size:.8rem">「到第 n 次為止」：重置 n 次時平均已消耗的材料（達成目標後就停止重置，n 夠大時會等於「達成目標」）。「達成目標」：從開始到第一次達成目標的期望值。「9 成把握要準備」：要有 9 成的機會達成目標，需要準備的次數與材料；「只用隨機」「只用選擇」每次消耗固定，是精確值；「隨機＋鎖定」標「約」，是依各種重置的比例推算的參考值。</p>
+    <ul class="note distlist" style="font-size:.8rem"><li><b>到第 n 次為止</b>：重抽 n 次時，平均已經用掉的材料。達成目標就會停下來，所以 n 夠大時會等於「達成目標」。</li><li><b>達成目標</b>：從開始到第一次達成目標，平均會用掉的材料。</li><li><b>9 成把握要準備</b>：要有 9 成的機會達成目標，需要準備的次數與材料。「只用隨機」「只用選擇」每次消耗固定，是精確值；「隨機＋鎖定」標「約」，是依各種重置的比例推算的參考值。</li></ul>
   </section>
 
   <section class="panel">
     <h2>策略比較（期望值）</h2>
     <div class="tblwrap" style="margin-top:0"><table id="cmp"><thead></thead><tbody></tbody></table></div>
-    <p class="note" style="margin-top:8px;font-size:.8rem" id="cmpNote"></p>
+    <ul class="note distlist" style="font-size:.8rem" id="cmpNote"></ul>
   </section>
 
   <section class="panel">
@@ -433,7 +433,7 @@ function startLocks(c){
 
 // ===== 畫面 =====
 // 小於 0.0001% 的機率改用科學記號，避免看起來像 0
-const pct=x=> (x>0 && x*100<1e-4) ? (x*100).toExponential(2)+"%" : (x*100).toFixed(4)+"%";
+const pct=x=> (x>0 && x*100<1e-4) ? "不到 0.0001%" : (x*100).toFixed(4)+"%";   // 太小的機率不用科學記號
 const fmt=x=> x>=1000 ? Math.round(x).toLocaleString("en-US") : (Math.round(x*100)/100).toLocaleString("en-US");
 const nNeed=(p,q)=> p>=1 ? 1 : Math.ceil(Math.log(1-q)/Math.log(1-p));
 function fillSkillSelects(){
@@ -510,7 +510,7 @@ function render(){
     const F= st==="lock" ? (k=>lk.doneAt[Math.min(k,NL)]) : (k=>1-Math.pow(1-p,k));
     let q10= st==="lock" ? null : nNeed(p,.1);
     if(st==="lock") for(let k=0;k<=NL;k++) if(lk.doneAt[k]>=0.1){ q10=k; break; }
-    drawDist(F,{K:Math.max(Q[2]??NL,Math.min(n,Q[2]!=null?Q[2]*3:NL)),q10,q50:Q[0],q90:Q[1],n,x:"重抽次數",at:"這一次",u:"次"});
+    drawDist(F,{K:Math.max(Q[2]??NL,Math.min(n,Q[2]!=null?Q[2]*3:NL)),q10,q50:Q[0],q90:Q[1],n,x:"重抽次數",at:"這一次",u:"次",goal:"達成目標"});
   } else $("distPanel").hidden=true;
   // 材料表：到第 n 次為止（達成就停止）與達成目標的期望值
   const SN={random:"只用隨機",choose:"只用選擇",lock:"隨機＋鎖定"};
@@ -570,10 +570,10 @@ function drawDist(F,o){
   if(n>0) gs+=vline(Math.min(n,K),"你：n = "+f(n),"var(--bar)",false,Tp+12);
   el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾'+o.u+'到達目標的機率">'+gs+'</svg>';
   note.innerHTML=["<b>橫軸</b>："+o.x+"。",
-    "<b>縱軸</b>：剛好在"+o.at+"到達目標的機率。曲線越高，代表越多人剛好在那"+o.u+"到達。",
+    "<b>縱軸</b>：剛好在"+o.at+(o.goal||"到達目標")+"的機率。曲線越高，代表越多人剛好在"+o.at.replace("這","那")+(o.goal?"達成":"到達")+"。",
     "<b>曲線的形狀</b>：左邊是運氣好、很快就到的人；右邊拖得很長的，是運氣差的人。",
-    "<b>三條虛線</b>（由左到右）：1 成、一半、9 成的人，在這之前就到達的"+(o.cnt||"次數")+"。",
-    "<b>藍線</b>：你設定的 n。藍線左邊塗色的面積，就是 n "+o.u+"內到達的機率（"+(F(Math.min(n,K))*100).toFixed(2)+"%）。"].map(x=>"<li>"+x+"</li>").join("");
+    "<b>三條虛線</b>（由左到右）：1 成、一半、9 成的人，在這之前就"+(o.goal?"達成":"到達")+"的"+(o.cnt||"次數")+"。",
+    "<b>藍線</b>：你設定的 n。藍線左邊塗色的面積，就是 n "+o.u+"內"+(o.goal?"達成":"到達")+"的機率（"+(F(Math.min(n,K))*100).toFixed(2)+"%）。"].map(x=>"<li>"+x+"</li>").join("");
 }
 // 運氣：做了 n 次還沒到的人有多少
 function showLuck(prefix,notYet,show){
@@ -585,7 +585,7 @@ function showLuck(prefix,notYet,show){
 function renderCompare(noGoal,impossible,p,C){
   const t=$("cmp"), names=["只用隨機","只用選擇","隨機＋鎖定"];
   t.tHead.innerHTML="<tr><th>項目</th>"+names.map(x=>"<th>"+x+"</th>").join("")+"</tr>";
-  if(noGoal||impossible){ t.tBodies[0].innerHTML='<tr><td colspan="4">'+(noGoal?"尚未設定目標":"目標無法達成")+"</td></tr>"; $("cmpNote").textContent=""; return; }
+  if(noGoal||impossible){ t.tBodies[0].innerHTML='<tr><td colspan="4">'+(noGoal?"尚未設定目標":"目標無法達成")+"</td></tr>"; $("cmpNote").innerHTML=""; return; }
   const lk=lockChain({...cur,strat:"lock"}), E=1/p;
   const lockBad = !lk.feasible, lockDone = !!lk.already;
   const T=[[E,0,0],[E,0,0],lockDone?[0,0,0]:lockBad?[NaN,NaN,NaN]:lk.E3];
@@ -601,7 +601,9 @@ function renderCompare(noGoal,impossible,p,C){
     ["達成 90% 機率所需次數",[q(nNeed(p,.9)),q(nNeed(p,.9)),fx(2,()=>lockDone?"0":q(lk.q90))]]];
   mats.forEach(m=>rows.push([m,[0,1,2].map(j=>fx(j,M[j][m]?fmt(M[j][m]):"—"))]));
   t.tBodies[0].innerHTML=rows.map(([a,v])=>"<tr><td>"+a+"</td>"+v.map((x,j)=>'<td class="'+(j===["random","choose","lock"].indexOf(cur.strat)?"now":"sum")+'">'+x+"</td>").join("")+"</tr>").join("");
-  $("cmpNote").textContent=(lk.custom?"「隨機＋鎖定」欄從目前設定的起始鎖定開始計算；「只用隨機」「只用選擇」則是整件重抽。":"")+"鎖定策略：抽到有用的條時，鎖住數值最高、且鎖住後目標仍可能達成的條（"+(cur.equip==="gold"?"金龍最多 2 條":"骨龍最多 1 條")+"），之後不解鎖。「只用選擇」的達成機率和「只用隨機」相同。藍色為目前選擇的策略。";
+  $("cmpNote").innerHTML=[lk.custom?"「隨機＋鎖定」這一欄從目前勾選的「已鎖住」狀態開始計算；「只用隨機」「只用選擇」是整件重抽。":"",
+    "<b>鎖定策略</b>：抽到有用的條時，鎖住數值最高、而且鎖住後目標仍有可能達成的那條（"+(cur.equip==="gold"?"金龍最多 2 條":"骨龍最多 1 條")+"），之後不解鎖。",
+    "「只用選擇」的達成機率和「只用隨機」相同。","藍色是目前選擇的重抽方式。"].filter(Boolean).map(x=>"<li>"+x+"</li>").join("");
 }
 function fillLockSelects(){
   const gold=cur.equip==="gold", maxLock=gold?2:1, show=cur.strat==="lock";
@@ -715,7 +717,7 @@ function renderRisk(noGoal){
     C.innerHTML="從開始重抽起算，用掉 <b>"+(Ts*q).toLocaleString("en-US")+" 個"+cm+"</b>（每次 "+q+" 個），就是第 "+Ts+" 次。"; C.hidden=false; }
   const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
     [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
-    '</div><div class="nums">到達 '+pc(a[0])+'・維持 '+pc(a[1])+'・倒退 '+pc(a[2])+'</div></div>';
+    '</div><div class="nums">達成 '+pc(a[0])+'・維持 '+pc(a[1])+'・倒退 '+pc(a[2])+'</div></div>';
   $("slBars").innerHTML=bar("一直重抽到 "+n+" 次用完（不止損）",base3)+(Ts<n?bar(Ts===0?"不重抽":(mode==="r50"?"照建議，":"")+"第 "+Ts+" 次後見好就收",st):"");
   // 第 T 次的結果
   const r=n-Ts, a=1-P.pg, C=COSTS[cur.equip][cur.part];
@@ -723,7 +725,7 @@ function renderRisk(noGoal){
   const rows=[];
   if(Ts>0){
     rows.push("<tr><td>已達成目標</td><td>"+pc(1-Math.pow(a,Ts))+"</td><td>已達成目標，停止。</td></tr>");
-    rows.push("<tr><td>不低於保底</td><td>"+pc(Math.pow(a,Ts-1)*P.pk)+"</td><td>"+(Ts<n?"照策略收手。":"")+"若仍繼續用完剩下 "+r+" 次：達成目標 "+pc(1-Math.pow(a,r))+"，最後結果不低於保底 "+pc(r>0?1-Math.pow(a,r-1)*P.pd:1)+"。</td></tr>");
+    rows.push("<tr><td>不低於保底</td><td>"+pc(Math.pow(a,Ts-1)*P.pk)+"</td><td>"+(Ts<n?"照策略收手。":"")+"如果不收手、把剩下 "+r+" 次用完：達成目標的機率 "+pc(1-Math.pow(a,r))+"，最後不比保底差（含達成目標）的機率 "+pc(r>0?1-Math.pow(a,r-1)*P.pd:1)+"。</td></tr>");
     rows.push('<tr class="basis"><td>低於保底</td><td>'+pc(Math.pow(a,Ts-1)*P.pd)+'</td><td><span class="tag">抽爛了，就是這個處境。</span>繼續重抽，抽到保底以上就收手（機率見下方）。</td></tr>');
   }
   $("slAtT").tBodies[0].innerHTML=rows.join(""); $("slAtT").parentElement.hidden=Ts===0;
@@ -733,15 +735,16 @@ function renderRisk(noGoal){
     '</li><li>每次重抽都是全部重新抽，和上一次的結果無關：單次抽到保底以上（含達成目標）的機率固定是 '+pc(q)+'，抽到比保底差的機率是 '+pc(P.pd)+'。</li></ul>';
   $("slBelow").hidden = Ts>=n || Ts===0;
   const ex=[];
+  ex.push("<li><b>T</b>（止損次數）：前 T 次照常重抽；第 T 次以後，只要抽到不比保底（"+B+"）差的結果就收手。目前採用的 T = "+Ts+"（n = "+n+"）。</li>");
   ex.push("<li>保底水準：所選技能"+(armor?"":"（古代）")+"的總和 "+base+(cur.base!=null?"（自訂）":"（= 目前總和）")+"。比保底低就算倒退；「維持」代表最後的結果不低於保底，不一定和目前的數值完全相同。</li>");
   ex.push("<li>不止損（用完 "+n+" 次，或中途達成目標）：達成目標 "+pc(base3[0])+"、維持 "+pc(base3[1])+"、倒退 "+pc(base3[2])+"。重抽會把目前的屬性換掉，所以抽到最後一次時，結果多半比現在差。</li>");
   if(Ts<n&&Ts>0){
     ex.push("<li>第 "+Ts+" 次後止損：達成目標 "+pc(st[0])+"（"+(st[0]<=base3[0]?"減少 ":"增加 ")+pp(st[0]-base3[0])+"）、維持 "+pc(st[1])+"、倒退 "+pc(st[2])+"（"+(st[2]<=base3[2]?"減少 ":"增加 ")+pp(st[2]-base3[2])+"）。</li>");
-    ex.push("<li>換句話說：放棄 "+pp(base3[0]-st[0])+" 的達成機會，換到倒退風險減少 "+pp(base3[2]-st[2])+"。</li>");
-    ex.push("<li>止損時平均實際重抽 "+fmt(st[3])+" 次（約 "+Object.entries(C).map(([m,qq])=>m+" "+fmt(st[3]*qq)).join("、")+"），剩下的材料可以留到下次。</li>");
+    ex.push("<li>換句話說：放棄 "+pp(base3[0]-st[0])+"的達成機會，換到倒退風險減少 "+pp(base3[2]-st[2])+"。</li>");
+    ex.push("<li>照止損提早收手時，沒用完的次數（材料）可以留到下次。「維持」包含提早收手的情況。</li>");
   }
   if(Ts===0) ex.push("<li>T = 0 表示不重抽，維持目前的數值。若仍要重抽，請參考上方「一直重抽到 "+n+" 次用完」的結果。</li>");
-  ex.push("<li>預設的 T 怎麼來：抽到比保底差的結果之後，要 "+r50+" 次才有 50% 的機會抽回保底以上。所以在最後 "+r50+" 次之前（第 "+n+" − "+r50+" = "+T50+" 次後），只要抽到不低於保底的結果就收手。</li>");
+  ex.push("<li>預設的 T 怎麼來：抽到比保底差的結果之後，要再重抽 "+r50+" 次，抽回保底以上的機會才達到一半（50%）。所以剩下的次數只有 "+r50+" 次以下時，也就是第 "+n+" − "+r50+" = "+T50+" 次以後，只要抽到不比保底差的結果就收手。</li>");
   ex.push("<li>怎麼選 T：T 越大越積極，越接近「用完全部次數」，達成目標的機會較高，但倒退的風險也較高；T 越小越保守。保底水準也可以自訂：設得越低，越容易收手。</li>");
   ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次重抽；「我自己決定第幾次後收手」可以直接試算任何時間點。</li>");
   $("slExplain").innerHTML=ex.join("");
@@ -761,7 +764,7 @@ function showBenefit(base,st,Ts,n,S,word){
   const red=1-st[2]/base[2];
   const how = red>=0.85?"幾乎都避開了" : red>=0.6?"少了一大半" : red>=0.4?"差不多少了一半" : red>=0.15?"少了一些" : "只少了一點點";
   const d=base[0]-st[0];
-  const cost = d<0.005 ? "到達目標的機會幾乎沒有變（"+pc(base[0])+" → "+pc(st[0])+"）" : "代價是到達目標的機會從 "+pc(base[0])+" 變成 "+pc(st[0])+"，少了 "+pp(d);
+  const cost = d<0.005 ? "達成目標的機會幾乎沒有變（"+pc(base[0])+" → "+pc(st[0])+"）" : "代價是達成目標的機會從 "+pc(base[0])+" 變成 "+pc(st[0])+"，少了 "+pp(d);
   el.innerHTML='<b>止損的好處：</b>最後'+word+'的機率從 '+pc(base[2])+' 降到 '+pc(st[2])+'，'+how+'；'+cost+'。';
   el.hidden=false;
 }
@@ -771,7 +774,7 @@ function chartNote(maxDown,Ts,T50,stopWord,reach,o){
   const n=o.n, act=o.act, flat=maxDown<0.005, t=[
     "<b>T 的定義</b>：止損次數。前 T 次照常"+act+"；第 T 次以後，"+stopWord+"就收手。T 的範圍是 0 到 n（n = "+n+"）：T = 0 表示一開始就不"+act+"，T = n 表示不止損，一直"+act+"到 n 次用完。",
     "<b>橫軸</b>：T。",
-    "<b>縱軸</b>：照「第 T 次以後收手」的做法，"+act+"結束時各種結果的機率。",
+    "<b>縱軸</b>：照「第 T 次以後收手」的做法，"+act+"結束時的機率。圖上畫出「"+reach+"」和「倒退」兩種；剩下的就是「維持」（100% 減去這兩種）。",
     "<b>橘線</b>："+reach+"的機率。",
     flat ? "<b>紅線</b>：倒退（"+o.down+"）的機率。這個設定下不論 T 是多少，倒退的機率都幾乎是 0，所以紅線貼在 0% 的線上，看不出來。"
          : "<b>紅線</b>：倒退（"+o.down+"）的機率。",

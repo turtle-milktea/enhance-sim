@@ -236,10 +236,10 @@ td.dropcell{color:var(--bad);font-weight:500}
   <section class="panel mats">
     <h2>材料期望值</h2>
     <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody></table></div>
-    <p class="matsNote">「到第 n 次為止」：強化 n 次時平均已消耗的材料（到達目標後就停止強化，n 夠大時會等於「全部完成」）。「全部完成」：從起點強化到結束時平均會用掉的材料。+11～+15 每次強化的用量都一樣。「9 成把握要準備」：要有 9 成的機會到達目標，需要準備的材料。</p>
+    <ul class="matsNote distlist"><li><b>到第 n 次為止</b>：強化 n 次時，平均已經用掉的材料。到達目標就會停下來，所以 n 夠大時會等於「全部完成」。</li><li><b>全部完成</b>：從起點一直強化到結束，平均會用掉的材料。</li><li><b>9 成把握要準備</b>：要有 9 成的機會到達目標，需要準備的材料。</li><li>+11～+15 每次強化的用量都一樣。</li></ul>
   </section>
 
-  <p class="note" id="note"></p>
+  <ul class="note distlist" id="note"></ul>
 
   <section class="panel">
     <details>
@@ -342,10 +342,10 @@ function drawDist(F,o){
   if(n>0) gs+=vline(Math.min(n,K),"你：n = "+f(n),"var(--bar)",false,Tp+12);
   el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾'+o.u+'到達目標的機率">'+gs+'</svg>';
   note.innerHTML=["<b>橫軸</b>："+o.x+"。",
-    "<b>縱軸</b>：剛好在"+o.at+"到達目標的機率。曲線越高，代表越多人剛好在那"+o.u+"到達。",
+    "<b>縱軸</b>：剛好在"+o.at+"到達目標的機率。曲線越高，代表越多人剛好在"+o.at.replace("這","那")+(o.goal?"達成":"到達")+"。",
     "<b>曲線的形狀</b>：左邊是運氣好、很快就到的人；右邊拖得很長的，是運氣差的人。",
-    "<b>三條虛線</b>（由左到右）：1 成、一半、9 成的人，在這之前就到達的"+(o.cnt||"次數")+"。",
-    "<b>藍線</b>：你設定的 n。藍線左邊塗色的面積，就是 n "+o.u+"內到達的機率（"+(F(Math.min(n,K))*100).toFixed(2)+"%）。"].map(x=>"<li>"+x+"</li>").join("");
+    "<b>三條虛線</b>（由左到右）：1 成、一半、9 成的人，在這之前就"+(o.goal?"達成":"到達")+"的"+(o.cnt||"次數")+"。",
+    "<b>藍線</b>：你設定的 n。藍線左邊塗色的面積，就是 n "+o.u+"內"+(o.goal?"達成":"到達")+"的機率（"+(F(Math.min(n,K))*100).toFixed(2)+"%）。"].map(x=>"<li>"+x+"</li>").join("");
 }
 // 運氣：做了 n 次還沒到的人有多少
 function showLuck(prefix,notYet,show){
@@ -364,7 +364,7 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
   const needAt=(f,w)=>{ for(let k=0;k<=MAXN;k++) if(f(k)>=w-1e-12) return k; return null; };
   const wB=Math.min(0.999,Fb(n)), nA=n>0?needAt(Fa,wB):null;
   $("evtSum").textContent = n>0
-    ? head+"時：用你設定的 "+n+" "+o.u+"，到達的機率從原本 1 倍的 "+pc1(Fa(n))+" 提高到 "+pc1(Fb(n))
+    ? head+"時：用你設定的 "+n.toLocaleString("en-US")+" "+o.u+"，到達的機率從原本 1 倍的 "+pc1(Fa(n))+" 提高到 "+pc1(Fb(n))
       +"；同樣 "+pc1(wB)+" 的機率，比較原本 1 倍要"+o.verb+" "+(nA===null?"超過 "+MAXN.toLocaleString("en-US"):nA.toLocaleString("en-US"))+" "+o.u+(nA!==null&&nA>n?"，現在可以少"+o.verb+" "+(nA-n).toLocaleString("en-US")+" "+o.u:"")
     : head+"時：一半的人 "+qb.q50+" "+o.u+"內到達（原本 1 倍要 "+qa.q50+" "+o.u+"）";
   const K=Math.max(qa.K,n,10), step=Math.max(1,Math.ceil(K/300));
@@ -374,7 +374,7 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
   for(const p of [0,.25,.5,.75,1]) gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(p)+'" y2="'+Y(p)+'" stroke="var(--line)"/><text x="'+(Lf-6)+'" y="'+(Y(p)+4)+'" text-anchor="end">'+(p*100)+'%</text>';
   for(const k of [0,Math.round(K/2),K]) gs+='<text x="'+X(k)+'" y="'+(H-8)+'" text-anchor="middle">'+k.toLocaleString("en-US")+'</text>';
   gs+='<path d="'+path(Fa)+'" fill="none" stroke="var(--muted)" stroke-width="2"/><path d="'+path(Fb)+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
-  if(n>0&&n<=K) gs+='<line x1="'+X(n)+'" x2="'+X(n)+'" y1="'+Tp+'" y2="'+(H-Bm)+'" stroke="var(--bar)" stroke-width="2"/><text class="lb" x="'+(X(n)+4)+'" y="'+(Tp+12)+'" fill="var(--bar)">你：n = '+n+'</text>';
+  if(n>0&&n<=K) gs+='<line x1="'+X(n)+'" x2="'+X(n)+'" y1="'+Tp+'" y2="'+(H-Bm)+'" stroke="var(--bar)" stroke-width="2"/><text class="lb" x="'+(X(n)+4)+'" y="'+(Tp+12)+'" fill="var(--bar)">你：n = '+n.toLocaleString("en-US")+'</text>';
   // 想要的機率：兩條曲線各自在第幾箱達到這個機率
   // 想要的機率：預設是「活動倍率強化 n 次」的機率（藍線與橘線的交點），跟著 n 走；玩家自己輸入後，設定沒變之前都用輸入的值
   { const el=$("evtP"), sig=JSON.stringify(cur), manual=el.dataset.sig===sig&&el.value.trim()!=="";
@@ -383,19 +383,19 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
     const need=f=>{ for(let k=0;k<=MAXN;k++) if(f(k)>=w-1e-12) return k; return null; }, na=need(Fa), nb=need(Fb);
     gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(w)+'" y2="'+Y(w)+'" stroke="var(--fg)" stroke-dasharray="3 3" opacity=".6"/>';
     for(const [k,col,dy] of [[na,"var(--muted)",14],[nb,"var(--goal)",-6]]) if(k!==null&&k<=K)
-      gs+='<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Y(w)+'" y2="'+(H-Bm)+'" stroke="'+col+'" stroke-dasharray="2 3"/><circle cx="'+X(k)+'" cy="'+Y(w)+'" r="4" fill="'+col+'"/><text class="lb" x="'+(X(k)+5)+'" y="'+(Y(w)+dy)+'" fill="'+col+'">'+k+' '+o.u+'</text>';
+      gs+='<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Y(w)+'" y2="'+(H-Bm)+'" stroke="'+col+'" stroke-dasharray="2 3"/><circle cx="'+X(k)+'" cy="'+Y(w)+'" r="4" fill="'+col+'"/><text class="lb" x="'+(X(k)+5)+'" y="'+(Y(w)+dy)+'" fill="'+col+'">'+k.toLocaleString("en-US")+' '+o.u+'</text>';
     const f=x=>x===null?"超過 "+MAXN.toLocaleString("en-US")+" "+o.u:"<b>"+x.toLocaleString("en-US")+" "+o.u+"</b>";
     const pw=(w*100).toFixed(1)+"%", who=(ev?"活動 1.3 倍":"倍率 "+m2+" 倍"), save=(na!==null&&nb!==null)?na-nb:null;
     const saveTxt = save===null ? "" : "，現在可以少"+o.verb+" <b>"+save.toLocaleString("en-US")+" "+o.u+"</b>"+(o.u==="次"?"（省下 "+save.toLocaleString("en-US")+" 次份的材料）":"");
     $("evtNeed").innerHTML = (!manual&&n>0)
-      ? "用你設定的 "+n+" "+o.u+"："+who+"有 "+pw+" 的機會到達；原本 1 倍要"+o.verb+" "+f(na)+"才有同樣的機會"+saveTxt+"。"
+      ? "用你設定的 "+n.toLocaleString("en-US")+" "+o.u+"："+who+"有 "+pw+" 的機會到達；原本 1 倍要"+o.verb+" "+f(na)+"才有同樣的機會"+saveTxt+"。"
       : "想要有 "+pw+" 的機會到達：原本 1 倍要"+o.verb+" "+f(na)+"，"+who+"要"+o.verb+" "+f(nb)+saveTxt+"。"; }
   $("evtChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="原本與'+nm+'在 n '+o.u+'內到達的機率">'+gs+'</svg>';
   $("evtNote").innerHTML=["<b>橫軸</b>："+o.x+"。",
     "<b>縱軸</b>：這麼多"+o.u+"內到達目標的機率。",
-    "<b>兩條線</b>：灰線是原本 1 倍，橘線是"+(ev?"活動 1.3 倍":"倍率 "+m2+" 倍")+"。兩條線之間的距離，就是"+(ev?"活動":"提高倍率")+"多出來的機會。",
-    "<b>一半的人</b>："+qb.q50+" "+o.u+"內到達（原本 1 倍要 "+qa.q50+" "+o.u+"）。",
-    "<b>9 成的人</b>："+(qb.q90??"—")+" "+o.u+"內到達（原本 1 倍要 "+(qa.q90??"—")+" "+o.u+"）。",
+    "<b>兩條線</b>：灰線是原本 1 倍，橘線是"+(ev?"活動 1.3 倍":"倍率 "+m2+" 倍")+"。同一個次數下，兩條線的上下距離，就是"+(ev?"活動":"提高倍率")+"多出來的機會。",
+    "<b>一半的人</b>："+qb.q50.toLocaleString("en-US")+" "+o.u+"內到達（原本 1 倍要 "+qa.q50.toLocaleString("en-US")+" "+o.u+"）。",
+    "<b>9 成的人</b>："+(qb.q90?.toLocaleString("en-US")??"—")+" "+o.u+"內到達（原本 1 倍要 "+(qa.q90?.toLocaleString("en-US")??"—")+" "+o.u+"）。",
     ev?o.why:o.why2]
     .concat(ev?["<b>比較的倍率</b>：倍率設成 1 或 1.3 時，比較 1 倍和 1.3 倍；設成其他倍率時，比較那個倍率和 1 倍。"]:[])
     .map(x=>"<li>"+x+"</li>").join("");
@@ -497,8 +497,8 @@ function renderStop(){
     const g=c=>sl.G[r*18+l*3+c], h=c=>sl.H[r*18+l*3+c];
     let adv, cls="";
     if(l>=T) adv="已到達目標，停止。";
-    else if(l===st) adv=(Ts<n?"照策略收手，維持 "+S+"。":"")+"若仍繼續用完剩下 "+r+" 次：提升到 "+G+" "+pc(h(0))+"，維持不低於 "+S+" "+pc(h(0)+h(1))+"。";
-    else if(l>st) adv="繼續強化，之後若掉回 "+S+" 就收手：提升到 "+G+" "+pc(g(0))+"。";
+    else if(l===st) adv=(Ts<n?"照策略收手，停在 "+S+"。":"")+"如果不收手、把剩下 "+r+" 次用完：衝上 "+G+" 的機率 "+pc(h(0))+"，最後不低於 "+S+"（含衝上目標）的機率 "+pc(h(0)+h(1))+"。";
+    else if(l>st) adv="繼續強化，之後若掉回 "+S+" 就收手。衝上 "+G+" 的機率 "+pc(g(0))+"。";
     else if(l===st-1){ cls="basis"; adv='<span class="tag">萬一在 '+S+' 失敗，會先掉到這裡。</span>繼續強化，爬回 '+S+' 就收手（機率見下方）。'; }
     else adv="繼續強化，爬回 "+S+" 就收手（機率見下方）。";
     rows.push('<tr class="'+cls+'"><td>'+LV(l)+"</td><td>"+pc(pl)+"</td><td>"+adv+"</td></tr>");
@@ -522,14 +522,15 @@ function renderStop(){
   $("slBelow").hidden = Ts>=n;
   // 策略解讀（條列）
   const ex=[];
-  ex.push("<li>不止損（用完 "+n+" 次）：到達 "+G+" "+pc(base[0])+"、維持 "+pc(base[1])+"、倒退到 "+S+" 以下 "+pc(base[2])+"。</li>");
+  ex.push("<li><b>T</b>（止損次數）：前 T 次照常強化；第 T 次以後，只要停在 "+S+" 就收手。目前採用的 T = "+Ts+"（n = "+n+"）。</li>");
+  ex.push("<li>不止損（一直強化到 "+n+" 次用完，中途到達目標就停）：到達 "+G+" "+pc(base[0])+"、維持 "+pc(base[1])+"、倒退到 "+S+" 以下 "+pc(base[2])+"。</li>");
   if(Ts<n && Ts>0){
     ex.push("<li>第 "+Ts+" 次後止損：到達 "+G+" "+pc(strat[0])+"（"+(strat[0]<=base[0]?"減少 ":"增加 ")+pp(strat[0]-base[0])+"）、維持 "+pc(strat[1])+"、倒退 "+pc(strat[2])+"（"+(strat[2]<=base[2]?"減少 ":"增加 ")+pp(strat[2]-base[2])+"）。</li>");
-    ex.push("<li>換句話說：放棄 "+pp(base[0]-strat[0])+" 的到達機會，換到倒退風險減少 "+pp(base[2]-strat[2])+"。</li>");
-    ex.push("<li>止損時平均實際用掉 "+used.toFixed(1)+" 次，剩下的材料可以留到下次。「維持」包含提早收手、沒用完材料的情況。</li>");
+    ex.push("<li>換句話說：放棄 "+pp(base[0]-strat[0])+"的到達機會，換到倒退風險減少 "+pp(base[2]-strat[2])+"。</li>");
+    ex.push("<li>照止損提早收手時，沒用完的次數（材料）可以留到下次。「維持」包含提早收手的情況。</li>");
   }
   if(Ts===0) ex.push("<li>T = 0 表示不進行強化，結果一定是維持在 "+S+"。若仍要強化，請參考上方「一直強化到 "+n+" 次用完」的結果。</li>");
-  ex.push("<li>預設的 T 怎麼來：萬一在 "+S+" 失敗會掉到 "+below+"，從 "+below+" 要 "+r50+" 次才有 50% 的機會爬回 "+S+"。所以在最後 "+r50+" 次之前（第 "+n+" − "+r50+" = "+T50+" 次後），只要停在 "+S+" 就收手。</li>");
+  ex.push("<li>預設的 T 怎麼來：萬一在 "+S+" 失敗會掉到 "+below+"；從 "+below+" 要再強化 "+r50+" 次，爬回 "+S+" 的機會才達到一半（50%）。所以剩下的次數只有 "+r50+" 次以下時，也就是第 "+n+" − "+r50+" = "+T50+" 次以後，只要停在 "+S+" 就收手。</li>");
   ex.push("<li>怎麼選 T：T 越大越積極，越接近「用完全部次數」，到達目標的機會較高，但倒退的風險也較高；T 越小越保守。</li>");
   ex.push("<li>其他方式：「指定可接受的倒退機率」會找出在倒退機率不超過你設定的值之下，最多可以嘗試幾次強化；「我自己決定第幾次後收手」可以直接試算任何時間點。</li>");
   $("slExplain").innerHTML=ex.join("");
@@ -555,7 +556,7 @@ function chartNote(maxDown,Ts,T50,stopWord,reach,o){
   const n=o.n, act=o.act, flat=maxDown<0.005, t=[
     "<b>T 的定義</b>：止損次數。前 T 次照常"+act+"；第 T 次以後，"+stopWord+"就收手。T 的範圍是 0 到 n（n = "+n+"）：T = 0 表示一開始就不"+act+"，T = n 表示不止損，一直"+act+"到 n 次用完。",
     "<b>橫軸</b>：T。",
-    "<b>縱軸</b>：照「第 T 次以後收手」的做法，"+act+"結束時各種結果的機率。",
+    "<b>縱軸</b>：照「第 T 次以後收手」的做法，"+act+"結束時的機率。圖上畫出「"+reach+"」和「倒退」兩種；剩下的就是「維持」（100% 減去這兩種）。",
     "<b>橘線</b>："+reach+"的機率。",
     flat ? "<b>紅線</b>：倒退（"+o.down+"）的機率。這個設定下不論 T 是多少，倒退的機率都幾乎是 0，所以紅線貼在 0% 的線上，看不出來。"
          : "<b>紅線</b>：倒退（"+o.down+"）的機率。",
@@ -599,12 +600,12 @@ function render(){
   $("nShow").textContent=n;
   $("kHit").textContent="已到達 "+LV(T)+"（n 次內）"; $("sHit").textContent=pct(hit);
   $("kNot").textContent="尚未到達 "+LV(T);        $("sNot").textContent=pct(1-hit);
-  if(t.e!==null){ $("kE").textContent="期望總次數（自起點）"; $("sE").textContent=t.e.toFixed(3); }
+  if(t.e!==null){ $("kE").textContent="期望總次數（自起點）"; $("sE").textContent=(Math.round(t.e*10)/10).toLocaleString("en-US"); }
   else { $("kE").textContent="最終能到達 "+LV(T)+" 的機率"; $("sE").textContent=pct(t.h); }
   $("sMed").textContent = t.med!==null ? t.med : (t.h<=0.5 ? "不會超過 50%" : "> "+MAXN);
   $("sQ90").textContent = t.q90!==null ? t.q90 : (t.h<0.9 ? "不會超過 90%" : "> "+MAXN);
   const reachable = T!==cur.start && t.h>0;
-  showLuck("強化了 "+n+" 次還沒到 "+LV(T)+" 的人",1-hit,reachable&&n>0&&T>cur.start);
+  showLuck("強化了 "+n.toLocaleString("en-US")+" 次還沒到 "+LV(T)+" 的人",1-hit,reachable&&n>0&&T>cur.start);
   if(reachable&&T>cur.start){
     drawDist(k=>t.out[Math.min(k,MAXN)*6+T],{K:Math.max(t.qEnd??MAXN,n),q10:t.q10,q50:t.med,q90:t.q90,n,x:"強化次數",at:"這一次",u:"次"});
     const m2=(cur.mult===1||cur.mult===1.3)?1.3:cur.mult, A=table(cur.start,T,1), Bt=table(cur.start,T,m2), Fo=tt=>k=>tt.out[Math.min(k,MAXN)*6+T];
@@ -617,10 +618,9 @@ function render(){
   const fm=x=>x>=1000?Math.round(x).toLocaleString("en-US"):(+x.toFixed(1)).toLocaleString("en-US");
   $("mats").tHead.innerHTML="<tr><th>材料</th><th>到第 "+n+" 次為止</th><th>全部完成</th><th>9 成把握要準備</th></tr>";
   $("mats").tBodies[0].innerHTML=MAT.map(([m,q])=>"<tr><td>"+m+'</td><td class="now">'+fm(t.att[n]*q)+'</td><td class="sum">'+fm(t.att[MAXN]*q)+"</td><td>"+(t.q90!==null&&T>cur.start?fm(t.q90*q):"—")+"</td></tr>").join("");
-  $("note").textContent = (T<cur.start
-      ? "目標低於起始等級：代表「掉到 "+LV(T)+"」的機率。若途中先到達 +15 就會停止，因此最終機率可能小於 100%。"
-      : T===cur.start ? "目標等於起始等級：第 0 次就已達成。" : "")
-    + " 對數縱軸以 10⁻⁶ 為下限。橘色長條為目標等級。";
+  $("note").innerHTML = [T<cur.start ? "目標低於起始等級：算的是「掉到 "+LV(T)+"」的機率。途中如果先到達 +15 就會停止，所以最終機率可能小於 100%。"
+      : T===cur.start ? "目標等於起始等級：第 0 次就已經達成。" : "",
+    "縱軸選「對數」時，最小顯示到 0.0001%。", "橘色長條是目標等級。"].filter(Boolean).map(x=>"<li>"+x+"</li>").join("");
   renderStop();
 }
 function setN(n,fromBox){   // fromBox：從「直接輸入」打字時不回寫欄位，避免中文輸入法重複輸入數字
