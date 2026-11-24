@@ -209,7 +209,7 @@ header .fold.rules{margin-top:10px}
     <details class="fold" id="evtWrap">
       <summary id="evtSum">活動 1.3 倍時差多少</summary>
       <div id="evtChart" class="distchart"></div>
-      <div class="legend"><span><i class="sw" style="background:var(--muted)"></i>平常（1 倍）</span><span><i class="sw" style="background:var(--goal)"></i>活動（1.3 倍）</span></div>
+      <div class="legend"><span><i class="sw" style="background:var(--muted)"></i>平常（1 倍）</span><span><i class="sw" style="background:var(--goal)"></i><span id="evtLegB">活動（1.3 倍）</span></span></div>
       <p class="note" id="evtNote"></p>
     </details>
   </section>
@@ -505,26 +505,30 @@ function drawDist(t,n){
   note.textContent="橫軸是強化次數，縱軸是「剛好在這一次到達目標」的機率。曲線越高，代表越多人剛好在那一次到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。三條虛線由左到右，分別是「1 成的人」「一半的人」「9 成的人」在這之前就到達的次數；藍線是你設定的 n，藍線左邊塗色的面積，就是 n 次內到達的機率（"+pct(hitAt(Math.min(n,MAXN)))+"）。";
 }
 
-// ===== 活動比較：固定比較 1 倍與 1.3 倍（和上面設定的倍率無關）=====
+// ===== 活動比較：倍率是 1 或 1.3 時比較 1 倍與 1.3 倍；設定其他倍率時，比較該倍率與 1 倍 =====
 function drawEvent(){
-  const a=table({...cur,mult:1}), b=table({...cur,mult:1.3}), wrap=$("evtWrap");
+  const m2 = (cur.mult===1||cur.mult===1.3) ? 1.3 : cur.mult, n=cur.n;
+  const a=table({...cur,mult:1}), b=table({...cur,mult:m2}), wrap=$("evtWrap");
   if(!(a.E>0)||a.med===null||b.med===null){ wrap.hidden=true; return; } wrap.hidden=false;
-  const pc0=(x,y)=>Math.round((1-y/x)*100)+"%";
-  $("evtSum").textContent="活動 1.3 倍時：一半的人 "+b.med+" 次內到達（平常要 "+a.med+" 次，少 "+pc0(a.med,b.med)+"）";
-  const K=Math.min(MAXN,Math.max(a.q99??MAXN,10)), F=t=>k=>t.out[Math.min(k,MAXN)*t.S+t.g];
-  const curve=t=>{ const f=F(t), step=Math.max(1,Math.ceil(K/300)), pts=[]; for(let k=1;k<=K;k+=step){ const k2=Math.min(K,k+step-1); pts.push([(k+k2)/2,(f(k2)-f(k-1))/(k2-k+1)]); } return pts; };
-  const A=curve(a), B=curve(b), ymax=Math.max(...A.map(x=>x[1]),...B.map(x=>x[1]))*1.08;
-  const W=640,H=200,Lf=46,Rr=12,Tp=10,Bm=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-Bm)*(1-p/ymax);
-  const path=pts=>pts.map(([k,p],j)=>(j?"L":"M")+X(k).toFixed(1)+","+Y(p).toFixed(1)).join("");
-  const yt=v=>{ const x=v*100; return (x>=1?x.toFixed(1):x>=0.1?x.toFixed(2):x.toFixed(3))+"%"; };
+  const nm = m2===1.3 ? "活動（1.3 倍）" : "倍率 "+m2+" 倍";
+  $("evtLegB").textContent=nm;
+  const F=t=>k=>t.out[Math.min(k,MAXN)*t.S+t.g], pc1=x=>(x*100).toFixed(1)+"%";
+  $("evtSum").textContent = n>0
+    ? nm.replace(/[（）]/g," ").trim()+"時：用你設定的 "+n+" 次，到達的機率從 "+pc1(F(a)(n))+" 提高到 "+pc1(F(b)(n))
+    : nm.replace(/[（）]/g," ").trim()+"時：一半的人 "+b.med+" 次內到達（平常要 "+a.med+" 次）";
+  const K=Math.min(MAXN,Math.max(a.q99??MAXN,n,10)), step=Math.max(1,Math.ceil(K/300));
+  const W=640,H=210,Lf=40,Rr=12,Tp=12,Bm=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-Bm)*(1-p);
+  const path=f=>{ let d=""; for(let k=0;k<=K;k+=step) d+=(d?"L":"M")+X(k).toFixed(1)+","+Y(f(k)).toFixed(1); return d+"L"+X(K).toFixed(1)+","+Y(f(K)).toFixed(1); };
   let gs="";
-  for(const f of [0,.5,1]){ const v=ymax*f; gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(Lf-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+yt(v)+'</text>'; }
+  for(const p of [0,.25,.5,.75,1]) gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(p)+'" y2="'+Y(p)+'" stroke="var(--line)"/><text x="'+(Lf-6)+'" y="'+(Y(p)+4)+'" text-anchor="end">'+(p*100)+'%</text>';
   for(const k of [0,Math.round(K/2),K]) gs+='<text x="'+X(k)+'" y="'+(H-8)+'" text-anchor="middle">'+k+'</text>';
-  gs+='<path d="'+path(A)+'" fill="none" stroke="var(--muted)" stroke-width="2"/><path d="'+path(B)+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
-  $("evtChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="平常與活動 1.3 倍的強化次數分布">'+gs+'</svg>';
-  $("evtNote").textContent="這個比較固定用 1 倍和 1.3 倍，和上面設定的倍率無關。"
-    +"活動時，1 成的人在 "+b.q10+" 次內到達（平常 "+a.q10+" 次）；一半的人在 "+b.med+" 次內（平常 "+a.med+" 次）；9 成的人在 "+(b.q90??"—")+" 次內（平常 "+(a.q90??"—")+" 次）。"
-    +"成功率只多了 30%，但成功變多的同時，失敗倒退的次數也跟著變少，所以需要的次數會少得比 30% 還多。";
+  gs+='<path d="'+path(F(a))+'" fill="none" stroke="var(--muted)" stroke-width="2"/><path d="'+path(F(b))+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
+  if(n>0&&n<=K) gs+='<line x1="'+X(n)+'" x2="'+X(n)+'" y1="'+Tp+'" y2="'+(H-Bm)+'" stroke="var(--bar)" stroke-width="2"/><text class="lb" x="'+(X(n)+4)+'" y="'+(Tp+12)+'" fill="var(--bar)">你：n = '+n+'</text>';
+  $("evtChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="平常與'+nm+'在 n 次內到達的機率">'+gs+'</svg>';
+  $("evtNote").textContent="橫軸是強化次數，縱軸是「這麼多次內到達目標」的機率。橘線一直在灰線上面，兩條線之間的距離，就是"+(m2===1.3?"活動":"提高倍率")+"多出來的機會。"
+    +(m2===1.3?"倍率設成 1 或 1.3 時，固定比較 1 倍和 1.3 倍；設成其他倍率時，改成比較那個倍率和 1 倍。":"")
+    +"一半的人在 "+b.med+" 次內到達（平常 "+a.med+" 次）；9 成的人在 "+(b.q90??"—")+" 次內（平常 "+(a.q90??"—")+" 次）。"
+    +"成功率提高的同時，失敗倒退的次數也跟著變少，所以需要的次數會少得比倍率看起來還多。";
 }
 
 // ===== 用材料換算強化次數 =====
