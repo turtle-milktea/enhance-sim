@@ -761,7 +761,7 @@ function renderStop(){
     const rowsE=[["衝上目標，提前結束",em.P[0],em.avg[0]],["第 "+Ts+" 次後回到 "+S+"，收手",em.P[1],em.avg[1]],[n+" 次全部用完，還沒到達目標",em.P[2],em.avg[2]]];
     $("slMats").tHead.innerHTML="<tr><th>怎麼結束</th><th>機率</th><th>平均強化</th><th>剩餘次數</th></tr>";
     $("slMats").tBodies[0].innerHTML=rowsE.map(([lb,p,a],k)=>"<tr><td>"+lb+"</td><td>"+pc(p)+"</td><td>"+(a===null?"—":f1(a))+"</td><td>"+(a===null?"—":f1(n-a))+"</td></tr>").join("");
-    $("slEndNote").innerHTML=["三種結束方式的機率加起來是 100%。第一列就是上方長條圖的「到達」。",
+    $("slEndNote").innerHTML=["三種結束方式的機率加起來是 100%。第一橫列就是上方長條圖的「到達」。",
       "止損只會影響第二種結束方式，最多省下 "+n+" − "+Ts+" = "+(n-Ts)+" 次的材料。止損主要的好處是降低倒退的機率，不是省材料。"].map(x=>"<li>"+x+"</li>").join("");
   }
   const {G:Gr,prev:Gr1}=resultsAt(sl,r,true), {G:Hr}=resultsAt(sl,r,false);
