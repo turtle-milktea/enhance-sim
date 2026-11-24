@@ -354,7 +354,7 @@ function table(c){
   const {states,idx,T,segs}=buildChain(c,c.mult), S=states.length, g=idx[c.target], s0=idx[c.start] ?? idx[key("gold",EVO_TO)];
   // 逐次推算 0..MAXN 次後的分布
   const out=new Float64Array((MAXN+1)*S); let v=new Float64Array(S); v[s0]=1;
-  let med=null, q90=null, q99=null;
+  let med=null, q10=null, q90=null, q99=null;
   // 到第 n 次為止的材料消耗期望值：前 n 次強化各自的消耗，加上「n 次內已進化的機率 × 進化材料」
   const MK=MAT_ORDER.length, cost=MAT_ORDER.map(()=>new Float64Array(S)), goldIdx=[];
   states.forEach((st,i)=>{ const {eq,lv}=parse(st); if(eq==="gold") goldIdx.push(i); if(i===g) return;
@@ -364,6 +364,7 @@ function table(c){
   for(let n=0;n<=MAXN;n++){
     out.set(v,n*S);
     if(med===null && v[g]>0.5) med=n;
+    if(q10===null && v[g]>=0.1) q10=n;
     if(q90===null && v[g]>=0.9) q90=n;
     if(q99===null && v[g]>=0.99) q99=n;
     let pe=0; if(segs.length===2) for(const i of goldIdx) pe+=v[i];
@@ -386,7 +387,7 @@ function table(c){
   states.forEach((s,i)=>{ if(i===g||!visits[i]) return; const {eq,lv}=parse(s);
     for(const [m,arr] of Object.entries(EQ[eq].mat[c.part])) if(arr[lv+1]) mats[eq][m]=(mats[eq][m]||0)+visits[i]*arr[lv+1]; });
   if(segs.length===2) for(const [m,q] of Object.entries(EVOLVE)) mats.evo[m]=q;
-  return cache[ck]={states,out,S,g,med,q90,q99,E,mats,cum,visits,evolves:segs.length===2};
+  return cache[ck]={states,out,S,g,med,q90,q99,E,mats,cum,visits,q10,evolves:segs.length===2};
 }
 
 // ===== 選單 =====
@@ -477,7 +478,7 @@ function drawDist(t,n){
   const K=Math.min(MAXN,Math.max(t.q99??MAXN,n,10));
   const step=Math.max(1,Math.ceil(K/300)), pts=[]; let ymax=0;
   for(let k=1;k<=K;k+=step){ const k2=Math.min(K,k+step-1); const p=(hitAt(k2)-hitAt(k-1))/(k2-k+1); pts.push([(k+k2)/2,p]); ymax=Math.max(ymax,p); }
-  const W=640,H=220,Lf=46,Rr=12,Tp=22,B=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-B)*(1-p/(ymax*1.08));
+  const W=640,H=232,Lf=46,Rr=12,Tp=34,B=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-B)*(1-p/(ymax*1.08));
   let dn="M"+X(0)+","+Y(0);
   for(const [k,p] of pts) if(k<=n) dn+="L"+X(k).toFixed(1)+","+Y(p).toFixed(1);
   const lastIn=pts.filter(([k])=>k<=n).pop();
@@ -488,12 +489,14 @@ function drawDist(t,n){
   for(const k of [0,Math.round(K/2),K]) gs+='<text x="'+X(k)+'" y="'+(H-8)+'" text-anchor="middle">'+k+'</text>';
   gs+='<path d="'+dn+'Z" fill="var(--goal)" opacity=".28"/>';
   gs+='<path d="'+pts.map(([k,p],j)=>(j?"L":"M")+X(k).toFixed(1)+","+Y(p).toFixed(1)).join("")+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
-  const vline=(k,txt,col,dash,dy)=>'<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="'+col+'"'+(dash?' stroke-dasharray="4 4"':' stroke-width="2"')+'/><text class="lb" x="'+(X(k)+4)+'" y="'+(Tp-8+dy)+'" fill="'+col+'">'+txt+'</text>';
-  gs+=vline(t.med,"一半："+t.med,"var(--muted)",true,0);
-  if(t.q90!==null&&t.q90<=K) gs+=vline(t.q90,"9 成："+t.q90,"var(--muted)",true,0);
-  if(n>0) gs+=vline(Math.min(n,K),"你：n = "+n,"var(--bar)",false,14);
+  // 標籤分兩列，避免 1 成、一半、9 成靠太近時重疊
+  const vline=(k,txt,col,dash,y)=>'<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="'+col+'"'+(dash?' stroke-dasharray="4 4"':' stroke-width="2"')+'/><text class="lb" x="'+(X(k)+4)+'" y="'+y+'" fill="'+col+'">'+txt+'</text>';
+  if(t.q10!==null&&t.q10>0) gs+=vline(t.q10,"1 成："+t.q10,"var(--muted)",true,12);
+  gs+=vline(t.med,"一半："+t.med,"var(--muted)",true,26);
+  if(t.q90!==null&&t.q90<=K) gs+=vline(t.q90,"9 成："+t.q90,"var(--muted)",true,12);
+  if(n>0) gs+=vline(Math.min(n,K),"你：n = "+n,"var(--bar)",false,Tp+12);
   el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾次強化時到達目標的機率">'+gs+'</svg>';
-  note.textContent="橫軸是強化次數，縱軸是「剛好在這一次到達目標」的機率。曲線越高，代表越多人剛好在那一次到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。虛線標出「一半的人」和「9 成的人」在這之前到達的次數；藍線是你設定的 n，藍線左邊塗色的面積，就是 n 次內到達的機率（"+pct(hitAt(Math.min(n,MAXN)))+"）。";
+  note.textContent="橫軸是強化次數，縱軸是「剛好在這一次到達目標」的機率。曲線越高，代表越多人剛好在那一次到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。三條虛線由左到右，分別是「1 成的人」「一半的人」「9 成的人」在這之前就到達的次數；藍線是你設定的 n，藍線左邊塗色的面積，就是 n 次內到達的機率（"+pct(hitAt(Math.min(n,MAXN)))+"）。";
 }
 
 // ===== 用材料換算強化次數 =====
