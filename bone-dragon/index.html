@@ -746,7 +746,7 @@ function renderStop(){
     V.className="verdict warn";
     V.textContent= mode==="r50"
       ? "現在不建議強化。萬一掉到 "+below+"，要再強化 "+r50+" 次，才有一半的機會爬回 "+S+"，可是你只準備了 "+n+" 次。"
-      : "止損次數 T = 0：等於一開始就停在 "+S+"，不進行強化。";
+      : "設定成第 0 次後收手：等於一開始就不強化，停在 "+S+"。";
   } else if(Ts>=n){
     V.className="verdict"; V.textContent="T = "+n+"：等於不止損，用完全部 "+n+" 次。";
   } else {

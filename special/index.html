@@ -705,7 +705,7 @@ function renderRisk(noGoal){
   else Ts=Math.max(0,Math.min(n,Math.round(+$("slT").value||0)));
   const base3=riskOutcome(P,n,n), st=riskOutcome(P,n,Ts);
   const B="總和 "+base, G="目標";
-  if(Ts===0) say(mode==="r50" ? "現在不建議重抽。萬一抽到比保底差的結果，要再重抽 "+r50+" 次，才有一半的機會抽回保底以上，可是你只準備了 "+n+" 次。" : "止損次數 T = 0：等於不重抽，維持目前的數值。", true), body.hidden=false;
+  if(Ts===0) say(mode==="r50" ? "現在不建議重抽。萬一抽到比保底差的結果，要再重抽 "+r50+" 次，才有一半的機會抽回保底以上，可是你只準備了 "+n+" 次。" : "設定成第 0 次後收手：等於一開始就不重抽，維持目前的數值。", true), body.hidden=false;
   else if(Ts>=n){ V.className="verdict"; V.textContent="T = "+n+"：等於不止損，用完全部 "+n+" 次。"; }
   else { V.className="verdict"; V.textContent = mode==="risk"
       ? "想把倒退機率控制在 "+(+$("slRisk").value||0)+"% 以內：最多嘗試 "+Ts+" 次重抽，之後只要抽到不低於保底（"+B+"）的結果就收手；如果那時的結果比保底差，就繼續重抽，抽到保底以上再收手。"
