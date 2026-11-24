@@ -75,6 +75,12 @@ header .fold.rules{margin-top:10px}
 .howto{padding-block:12px;background:color-mix(in srgb,var(--bar) 8%,var(--panel))}
 .howto h2{font-size:.92rem;margin:0 0 4px}
 .howto p{margin:0;font-size:.9rem;line-height:1.6}
+.luck{grid-column:1/-1;margin:0;line-height:1.6}
+.luck b{font-weight:600}
+.dist h2{font-size:1rem;margin:0 0 6px}
+.distchart svg{width:100%;height:auto;display:block}
+.distchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.distchart .lb{font-family:var(--sans);font-size:11px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -135,6 +141,13 @@ header .fold.rules{margin-top:10px}
     <div class="stat"><div class="k">期望暗黑核心</div><div class="v" id="sECore"></div></div>
     <div class="stat"><div class="k">達成 50% 機率所需箱數</div><div class="v" id="sQ50"></div></div>
     <div class="stat"><div class="k">達成 90% 機率所需箱數</div><div class="v" id="sQ90"></div></div>
+    <p class="luck" id="luck" hidden></p>
+  </section>
+
+  <section class="panel dist" id="distPanel">
+    <h2>要開幾箱才會到達：機率分布</h2>
+    <div id="distChart" class="distchart"></div>
+    <p class="note" id="distNote"></p>
   </section>
 
   <p class="note">每箱平均 10 個暗黑核心。期望箱數略高於「期望核心 ÷ 10」，因為最後一箱湊夠核心時通常會多出一些，完成時會剩下用不到的核心。開箱多出的核心會保留到下一次強化或下一個飾品。冰凝槌子不提供核心。對數橫軸以 10⁻⁶ 為下限。橘色為目標。</p>
@@ -295,6 +308,45 @@ function render(){
   const q=x=> x===null ? "超過 "+MAXN+"<small>箱</small>" : x+"<small>箱</small>";
   $("sQ50").innerHTML=q(t.q50);
   $("sQ90").innerHTML=q(t.q90);
+  // 機率分布與運氣提示
+  const live=t.doneAt[0]<1, qn=x=>{ for(let k=0;k<=MAXN;k++) if(t.doneAt[k]>=x) return k; return null; };
+  const q10=qn(0.1), q99=qn(0.99);
+  showLuck("開了 "+n+" 箱還沒"+(K===1?"到 +"+T:"讓 "+K+" 個都到 +"+T)+" 的人",1-t.doneAt[n],live&&n>0);
+  if(live) drawDist(k=>t.doneAt[Math.min(k,MAXN)],{K:Math.max(q99??MAXN,Math.min(n,(q99??MAXN)*3)),q10,q50:t.q50,q90:t.q90,n,x:"開箱數",at:"這一箱",u:"箱"});
+  else $("distPanel").hidden=true;
+}
+// ===== 機率分布：剛好在第 k 次到達目標的機率 =====
+// F(k)：k 次內到達的機率；o = {K 橫軸上限, q10, q50, q90, n, x 橫軸名稱, at 「這一次」, u 單位}
+function drawDist(F,o){
+  const el=$("distChart"), note=$("distNote"), K=Math.max(10,o.K), n=o.n;
+  const step=Math.max(1,Math.ceil(K/300)), pts=[]; let ymax=0;
+  for(let k=1;k<=K;k+=step){ const k2=Math.min(K,k+step-1); const p=(F(k2)-F(k-1))/(k2-k+1); pts.push([(k+k2)/2,p]); ymax=Math.max(ymax,p); }
+  if(!(ymax>0)){ el.innerHTML=""; note.textContent=""; $("distPanel").hidden=true; return; }
+  $("distPanel").hidden=false;
+  const W=640,H=232,Lf=46,Rr=12,Tp=34,B=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-B)*(1-p/(ymax*1.08));
+  let dn="M"+X(0)+","+Y(0); for(const [k,p] of pts) if(k<=n) dn+="L"+X(k).toFixed(1)+","+Y(p).toFixed(1);
+  const lastIn=pts.filter(([k])=>k<=n).pop(); dn+= lastIn?"L"+X(Math.min(n,lastIn[0])).toFixed(1)+","+Y(0):"";
+  const yt=v=>{ const x=v*100; return (x>=1?x.toFixed(1):x>=0.1?x.toFixed(2):x.toFixed(3))+"%"; };
+  let gs="";
+  for(const f of [0,.5,1]){ const v=ymax*1.08*f; gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(Lf-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+yt(v)+'</text>'; }
+  for(const k of [0,Math.round(K/2),K]) gs+='<text x="'+X(k)+'" y="'+(H-8)+'" text-anchor="middle">'+k.toLocaleString("en-US")+'</text>';
+  gs+='<path d="'+dn+'Z" fill="var(--goal)" opacity=".28"/>';
+  gs+='<path d="'+pts.map(([k,p],j)=>(j?"L":"M")+X(k).toFixed(1)+","+Y(p).toFixed(1)).join("")+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
+  // 標籤分兩列，避免 1 成、一半、9 成靠太近時重疊
+  const vline=(k,txt,col,dash,y)=>'<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="'+col+'"'+(dash?' stroke-dasharray="4 4"':' stroke-width="2"')+'/><text class="lb" x="'+(X(k)+4)+'" y="'+y+'" fill="'+col+'">'+txt+'</text>';
+  const f=x=>x.toLocaleString("en-US");
+  if(o.q10!=null&&o.q10>0&&o.q10<=K) gs+=vline(o.q10,"1 成："+f(o.q10),"var(--muted)",true,12);
+  if(o.q50!=null&&o.q50<=K) gs+=vline(o.q50,"一半："+f(o.q50),"var(--muted)",true,26);
+  if(o.q90!=null&&o.q90<=K) gs+=vline(o.q90,"9 成："+f(o.q90),"var(--muted)",true,12);
+  if(n>0) gs+=vline(Math.min(n,K),"你：n = "+f(n),"var(--bar)",false,Tp+12);
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾'+o.u+'到達目標的機率">'+gs+'</svg>';
+  note.textContent="橫軸是"+o.x+"，縱軸是「剛好在"+o.at+"到達目標」的機率。曲線越高，代表越多人剛好在那"+o.u+"到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。三條虛線由左到右，分別是「1 成的人」「一半的人」「9 成的人」在這之前就到達的"+o.x+"；藍線是你設定的 n，藍線左邊塗色的面積，就是 n "+o.u+"內到達的機率（"+pct(F(Math.min(n,K)))+"）。";
+}
+// 運氣：做了 n 次還沒到的人有多少
+function showLuck(prefix,notYet,show){
+  const L=$("luck"); L.hidden=!(show&&notYet>0.0005); if(L.hidden) return;
+  L.innerHTML=prefix+"，100 個人裡"+(notYet*100<1?"<b>不到 1</b>":notYet*100>99?"<b>超過 99</b>":"大約有 <b>"+Math.round(notYet*100)+"</b>")+" 個。"
+    +(notYet<0.1?"如果你是其中一個，代表運氣比 9 成的人差。":notYet<0.5?"":"還沒到的人比到了的人多，不用太擔心。");
 }
 // 目標只能選大於或等於進化後等級的選項
 function limitTarget(){

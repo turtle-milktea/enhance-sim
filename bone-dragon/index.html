@@ -446,7 +446,7 @@ function render(){
   $("sQ90").textContent=t.q90!==null?t.q90:"> "+MAXN;
   // 運氣：強化了 n 次還沒到的人有多少
   const L=$("luck"), notYet=1-hit; L.hidden=!(n>0&&notYet>0.0005&&t.g!==undefined&&t.E>0);
-  if(!L.hidden) L.innerHTML="強化了 "+n+" 次還沒到 "+lab(cur.target)+" 的人，100 個人裡大約有 <b>"+(notYet*100<1?"不到 1":Math.round(notYet*100))+"</b> 個。"
+  if(!L.hidden) L.innerHTML="強化了 "+n+" 次還沒到 "+lab(cur.target)+" 的人，100 個人裡"+(notYet*100<1?"<b>不到 1</b>":notYet*100>99?"<b>超過 99</b>":"大約有 <b>"+Math.round(notYet*100)+"</b>")+" 個。"
     +(notYet<0.1?"如果你是其中一個，代表運氣比 9 成的人差。":notYet<0.5?"":"還沒到的人比到了的人多，不用太擔心。");
   drawDist(t,n);
   // 材料表

@@ -115,6 +115,12 @@ tr.cared td{color:var(--goal);font-weight:500}
 header .fold.rules{margin-top:10px}
 .count{margin:-8px 0 14px;line-height:1.6}
 .count b{font-weight:600}
+.luck{grid-column:1/-1;margin:0;line-height:1.6}
+.luck b{font-weight:600}
+.dist h2{font-size:1rem;margin:0 0 6px}
+.distchart svg{width:100%;height:auto;display:block}
+.distchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.distchart .lb{font-family:var(--sans);font-size:11px}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 .howto{padding-block:12px;background:color-mix(in srgb,var(--bar) 8%,var(--panel))}
 .howto h2{font-size:.92rem;margin:0 0 4px}
@@ -208,6 +214,13 @@ header .fold.rules{margin-top:10px}
     <div class="stat"><div class="k">達成 50% 機率所需次數</div><div class="v" id="sQ50"></div></div>
     <div class="stat"><div class="k">達成 90% 機率所需次數</div><div class="v" id="sQ90"></div></div>
     <div class="stat"><div class="k">達成 99% 機率所需次數</div><div class="v" id="sQ99"></div></div>
+    <p class="luck" id="luck" hidden></p>
+  </section>
+
+  <section class="panel dist" id="distPanel">
+    <h2>要重抽幾次才會抽到：機率分布</h2>
+    <div id="distChart" class="distchart"></div>
+    <p class="note" id="distNote"></p>
   </section>
 
   <section class="panel stop" id="stopPanel" hidden>
@@ -245,7 +258,7 @@ header .fold.rules{margin-top:10px}
   <section class="panel">
     <h2 id="matsTitle">材料期望值</h2>
     <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody></table></div>
-    <p class="note" style="margin-top:8px;font-size:.8rem">「到第 n 次為止」：重置 n 次時平均已消耗的材料（達成目標後就停止重置，n 夠大時會等於「達成目標」）。「達成目標」：從開始到第一次達成目標的期望值。</p>
+    <p class="note" style="margin-top:8px;font-size:.8rem">「到第 n 次為止」：重置 n 次時平均已消耗的材料（達成目標後就停止重置，n 夠大時會等於「達成目標」）。「達成目標」：從開始到第一次達成目標的期望值。「9 成把握要準備」：要有 9 成的機會達成目標，需要準備的次數與材料；「只用隨機」「只用選擇」每次消耗固定，是精確值；「隨機＋鎖定」標「約」，是依各種重置的比例推算的參考值。</p>
   </section>
 
   <section class="panel">
@@ -488,6 +501,15 @@ function render(){
     $("sE").innerHTML=fmt(E)+"<small>次</small>";
     [["sQ50",0],["sQ90",1],["sQ99",2]].forEach(([id,j])=>$(id).innerHTML= Q[j]===null ? "超過 "+NL.toLocaleString("en-US")+"<small>次</small>" : Q[j].toLocaleString("en-US")+"<small>次</small>");
   }
+  // 機率分布與運氣提示
+  const live=!(noGoal||impossible||already);
+  showLuck("重抽了 "+n.toLocaleString("en-US")+" 次還沒抽到目標的人",1-(pn||0),live&&n>0);
+  if(live){
+    const F= st==="lock" ? (k=>lk.doneAt[Math.min(k,NL)]) : (k=>1-Math.pow(1-p,k));
+    let q10= st==="lock" ? null : nNeed(p,.1);
+    if(st==="lock") for(let k=0;k<=NL;k++) if(lk.doneAt[k]>=0.1){ q10=k; break; }
+    drawDist(F,{K:Math.max(Q[2]??NL,Math.min(n,Q[2]!=null?Q[2]*3:NL)),q10,q50:Q[0],q90:Q[1],n,x:"重抽次數",at:"這一次",u:"次"});
+  } else $("distPanel").hidden=true;
   // 材料表：到第 n 次為止（達成就停止）與達成目標的期望值
   const SN={random:"只用隨機",choose:"只用選擇",lock:"隨機＋鎖定"};
   $("matsTitle").textContent="材料期望值（"+SN[st]+"）";
@@ -497,13 +519,16 @@ function render(){
   const nowM = usedT?matOf(usedT):null, fullM = fullT?matOf(fullT):null;
   const mats=MAT_ORDER.filter(m=>unit.some(u=>u[m]));
   const cell=(x,cls)=>'<td class="'+cls+'">'+(x==null?"—":fmt(x))+"</td>";
-  const rowsHtml=[["重置次數",usedT?usedT.reduce((a,b)=>a+b,0):null,fullT?fullT.reduce((a,b)=>a+b,0):null]];
-  if(st==="lock"){ rowsHtml.push(["　其中隨機",usedT?usedT[0]:null,fullT?fullT[0]:null],["　其中鎖 1 條",usedT?usedT[1]:null,fullT?fullT[1]:null]);
-    if(C.lock2) rowsHtml.push(["　其中鎖 2 條",usedT?usedT[2]:null,fullT?fullT[2]:null]); }
-  mats.forEach(m=>rowsHtml.push([m,nowM?nowM[m]||0:null,fullM?fullM[m]||0:null]));
+  // 9 成把握要準備：隨機、選擇每次消耗固定，是精確值；鎖定依各種重置的比例推算（約）
+  const q90T = (fullT&&Q&&Q[1]!=null) ? (already?[0,0,0]: st==="lock" ? fullT.map(x=>E>0?x*Q[1]/E:0) : [Q[1],0,0]) : null, q90M=q90T?matOf(q90T):null;
+  const rowsHtml=[["重置次數",usedT?usedT.reduce((a,b)=>a+b,0):null,fullT?fullT.reduce((a,b)=>a+b,0):null,q90T?q90T.reduce((a,b)=>a+b,0):null]];
+  if(st==="lock"){ rowsHtml.push(["　其中隨機",usedT?usedT[0]:null,fullT?fullT[0]:null,q90T?q90T[0]:null],["　其中鎖 1 條",usedT?usedT[1]:null,fullT?fullT[1]:null,q90T?q90T[1]:null]);
+    if(C.lock2) rowsHtml.push(["　其中鎖 2 條",usedT?usedT[2]:null,fullT?fullT[2]:null,q90T?q90T[2]:null]); }
+  mats.forEach(m=>rowsHtml.push([m,nowM?nowM[m]||0:null,fullM?fullM[m]||0:null,q90M?q90M[m]||0:null]));
+  const approx = st==="lock" && !already;
   const tb=$("mats");
-  tb.tHead.innerHTML="<tr><th>項目</th><th>到第 "+n.toLocaleString("en-US")+" 次為止</th><th>達成目標</th></tr>";
-  tb.tBodies[0].innerHTML=rowsHtml.map(([a,x,y])=>"<tr><td>"+a+"</td>"+cell(noGoal?null:x,"now")+((impossible&&!noGoal)?'<td class="sum">無法達成</td>':cell(y,"sum"))+"</tr>").join("");
+  tb.tHead.innerHTML="<tr><th>項目</th><th>到第 "+n.toLocaleString("en-US")+" 次為止</th><th>達成目標</th><th>9 成把握要準備</th></tr>";
+  tb.tBodies[0].innerHTML=rowsHtml.map(([a,x,y,z])=>"<tr><td>"+a+"</td>"+cell(noGoal?null:x,"now")+((impossible&&!noGoal)?'<td class="sum">無法達成</td><td>—</td>':cell(y,"sum")+"<td>"+(z==null||noGoal?"—":(approx?"約 ":"")+fmt(z))+"</td>")+"</tr>").join("");
   renderRisk(noGoal);
   const lh=$("lockHint"), sl=startLocks(cur);
   lh.hidden = st!=="lock";
@@ -516,6 +541,39 @@ function render(){
       "從目前鎖住的狀態開始算，每次重置依鎖住的條數付費。"+(cur.equip==="gold"&&sl.length===1?"之後抽到有用的條時，仍會自動鎖第 2 條。":"");
   }
   renderCompare(noGoal,impossible&&st!=="lock"?true:(p===0),p,C);
+}
+// ===== 機率分布：剛好在第 k 次到達目標的機率 =====
+// F(k)：k 次內到達的機率；o = {K 橫軸上限, q10, q50, q90, n, x 橫軸名稱, at 「這一次」, u 單位}
+function drawDist(F,o){
+  const el=$("distChart"), note=$("distNote"), K=Math.max(10,o.K), n=o.n;
+  const step=Math.max(1,Math.ceil(K/300)), pts=[]; let ymax=0;
+  for(let k=1;k<=K;k+=step){ const k2=Math.min(K,k+step-1); const p=(F(k2)-F(k-1))/(k2-k+1); pts.push([(k+k2)/2,p]); ymax=Math.max(ymax,p); }
+  if(!(ymax>0)){ el.innerHTML=""; note.textContent=""; $("distPanel").hidden=true; return; }
+  $("distPanel").hidden=false;
+  const W=640,H=232,Lf=46,Rr=12,Tp=34,B=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-B)*(1-p/(ymax*1.08));
+  let dn="M"+X(0)+","+Y(0); for(const [k,p] of pts) if(k<=n) dn+="L"+X(k).toFixed(1)+","+Y(p).toFixed(1);
+  const lastIn=pts.filter(([k])=>k<=n).pop(); dn+= lastIn?"L"+X(Math.min(n,lastIn[0])).toFixed(1)+","+Y(0):"";
+  const yt=v=>{ const x=v*100; return (x>=1?x.toFixed(1):x>=0.1?x.toFixed(2):x.toFixed(3))+"%"; };
+  let gs="";
+  for(const f of [0,.5,1]){ const v=ymax*1.08*f; gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(Lf-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+yt(v)+'</text>'; }
+  for(const k of [0,Math.round(K/2),K]) gs+='<text x="'+X(k)+'" y="'+(H-8)+'" text-anchor="middle">'+k.toLocaleString("en-US")+'</text>';
+  gs+='<path d="'+dn+'Z" fill="var(--goal)" opacity=".28"/>';
+  gs+='<path d="'+pts.map(([k,p],j)=>(j?"L":"M")+X(k).toFixed(1)+","+Y(p).toFixed(1)).join("")+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
+  // 標籤分兩列，避免 1 成、一半、9 成靠太近時重疊
+  const vline=(k,txt,col,dash,y)=>'<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="'+col+'"'+(dash?' stroke-dasharray="4 4"':' stroke-width="2"')+'/><text class="lb" x="'+(X(k)+4)+'" y="'+y+'" fill="'+col+'">'+txt+'</text>';
+  const f=x=>x.toLocaleString("en-US");
+  if(o.q10!=null&&o.q10>0&&o.q10<=K) gs+=vline(o.q10,"1 成："+f(o.q10),"var(--muted)",true,12);
+  if(o.q50!=null&&o.q50<=K) gs+=vline(o.q50,"一半："+f(o.q50),"var(--muted)",true,26);
+  if(o.q90!=null&&o.q90<=K) gs+=vline(o.q90,"9 成："+f(o.q90),"var(--muted)",true,12);
+  if(n>0) gs+=vline(Math.min(n,K),"你：n = "+f(n),"var(--bar)",false,Tp+12);
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾'+o.u+'到達目標的機率">'+gs+'</svg>';
+  note.textContent="橫軸是"+o.x+"，縱軸是「剛好在"+o.at+"到達目標」的機率。曲線越高，代表越多人剛好在那"+o.u+"到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。三條虛線由左到右，分別是「1 成的人」「一半的人」「9 成的人」在這之前就到達的"+o.x+"；藍線是你設定的 n，藍線左邊塗色的面積，就是 n "+o.u+"內到達的機率（"+pct(F(Math.min(n,K)))+"）。";
+}
+// 運氣：做了 n 次還沒到的人有多少
+function showLuck(prefix,notYet,show){
+  const L=$("luck"); L.hidden=!(show&&notYet>0.0005); if(L.hidden) return;
+  L.innerHTML=prefix+"，100 個人裡"+(notYet*100<1?"<b>不到 1</b>":notYet*100>99?"<b>超過 99</b>":"大約有 <b>"+Math.round(notYet*100)+"</b>")+" 個。"
+    +(notYet<0.1?"如果你是其中一個，代表運氣比 9 成的人差。":notYet<0.5?"":"還沒到的人比到了的人多，不用太擔心。");
 }
 // ===== 策略比較表 =====
 function renderCompare(noGoal,impossible,p,C){

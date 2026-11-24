@@ -81,6 +81,12 @@ header .fold.rules{margin-top:10px}
 @media (max-width:480px){.mats table{font-size:.74rem}.mats th,.mats td{padding:5px 4px}.mats td:first-child,.mats th{white-space:normal}.mats td:first-child{min-width:4.5em}}
 .count{margin:-8px 0 14px;line-height:1.6}
 .count b{font-weight:600}
+.luck{grid-column:1/-1;margin:0;line-height:1.6}
+.luck b{font-weight:600}
+.dist h2{font-size:1rem;margin:0 0 6px}
+.distchart svg{width:100%;height:auto;display:block}
+.distchart text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.distchart .lb{font-family:var(--sans);font-size:11px}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 .stop #slAtT th{white-space:normal;vertical-align:bottom}
 .stop #slAtT th:first-child{min-width:5em}
@@ -172,6 +178,14 @@ td.dropcell{color:var(--bad);font-weight:500}
     <div class="stat"><div class="k" id="kNot"></div><div class="v" id="sNot"></div></div>
     <div class="stat"><div class="k" id="kE"></div><div class="v" id="sE"></div></div>
     <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
+    <div class="stat"><div class="k">達成 90% 機率所需次數</div><div class="v" id="sQ90"></div></div>
+    <p class="luck" id="luck" hidden></p>
+  </section>
+
+  <section class="panel dist" id="distPanel">
+    <h2>要強化幾次才會到達：機率分布</h2>
+    <div id="distChart" class="distchart"></div>
+    <p class="note" id="distNote"></p>
   </section>
 
   <section class="panel stop" id="stopPanel">
@@ -208,7 +222,7 @@ td.dropcell{color:var(--bad);font-weight:500}
   <section class="panel mats">
     <h2>材料期望值</h2>
     <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody></table></div>
-    <p class="matsNote">「到第 n 次為止」：強化 n 次時平均已消耗的材料（到達目標後就停止強化，n 夠大時會等於「全部完成」）。「全部完成」：從起點強化到結束時平均會用掉的材料。+11～+15 每次強化的用量都一樣。</p>
+    <p class="matsNote">「到第 n 次為止」：強化 n 次時平均已消耗的材料（到達目標後就停止強化，n 夠大時會等於「全部完成」）。「全部完成」：從起點強化到結束時平均會用掉的材料。+11～+15 每次強化的用量都一樣。「9 成把握要準備」：要有 9 成的機會到達目標，需要準備的材料。</p>
   </section>
 
   <p class="note" id="note"></p>
@@ -279,10 +293,47 @@ function table(start,T,m){
     v=w;
   }
   let med=null; for(let n=0;n<=MAXN;n++){ if(out[n*6+T]>0.5){med=n;break;} }
+  // 1 成、9 成、99%（最終到不了 100% 時，改用最終機率的 99%）的次數
+  const fin=out[MAXN*6+T], qn=q=>{ for(let n=0;n<=MAXN;n++) if(out[n*6+T]>=q-1e-12) return n; return null; };
+  const q10=qn(0.1), q90=qn(0.9), qEnd=qn(Math.min(0.99,fin*0.99));
   // 到第 n 次為止平均已強化的次數（停在目標或 +15 就不再強化）
   const att=new Float64Array(MAXN+1);
   for(let n=1;n<=MAXN;n++){ let a=0; for(let i=0;i<6;i++) if(i!==T&&i!==5) a+=out[(n-1)*6+i]; att[n]=att[n-1]+a; }
-  return cache[key]={out,med,att,...analytic(start,T,m)};
+  return cache[key]={out,med,att,q10,q90,qEnd,...analytic(start,T,m)};
+}
+
+// ===== 機率分布：剛好在第 k 次到達目標的機率 =====
+// F(k)：k 次內到達的機率；o = {K 橫軸上限, q10, q50, q90, n, x 橫軸名稱, at 「這一次」, u 單位}
+function drawDist(F,o){
+  const el=$("distChart"), note=$("distNote"), K=Math.max(10,o.K), n=o.n;
+  const step=Math.max(1,Math.ceil(K/300)), pts=[]; let ymax=0;
+  for(let k=1;k<=K;k+=step){ const k2=Math.min(K,k+step-1); const p=(F(k2)-F(k-1))/(k2-k+1); pts.push([(k+k2)/2,p]); ymax=Math.max(ymax,p); }
+  if(!(ymax>0)){ el.innerHTML=""; note.textContent=""; $("distPanel").hidden=true; return; }
+  $("distPanel").hidden=false;
+  const W=640,H=232,Lf=46,Rr=12,Tp=34,B=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-B)*(1-p/(ymax*1.08));
+  let dn="M"+X(0)+","+Y(0); for(const [k,p] of pts) if(k<=n) dn+="L"+X(k).toFixed(1)+","+Y(p).toFixed(1);
+  const lastIn=pts.filter(([k])=>k<=n).pop(); dn+= lastIn?"L"+X(Math.min(n,lastIn[0])).toFixed(1)+","+Y(0):"";
+  const yt=v=>{ const x=v*100; return (x>=1?x.toFixed(1):x>=0.1?x.toFixed(2):x.toFixed(3))+"%"; };
+  let gs="";
+  for(const f of [0,.5,1]){ const v=ymax*1.08*f; gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(Lf-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+yt(v)+'</text>'; }
+  for(const k of [0,Math.round(K/2),K]) gs+='<text x="'+X(k)+'" y="'+(H-8)+'" text-anchor="middle">'+k.toLocaleString("en-US")+'</text>';
+  gs+='<path d="'+dn+'Z" fill="var(--goal)" opacity=".28"/>';
+  gs+='<path d="'+pts.map(([k,p],j)=>(j?"L":"M")+X(k).toFixed(1)+","+Y(p).toFixed(1)).join("")+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
+  // 標籤分兩列，避免 1 成、一半、9 成靠太近時重疊
+  const vline=(k,txt,col,dash,y)=>'<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Tp+'" y2="'+(H-B)+'" stroke="'+col+'"'+(dash?' stroke-dasharray="4 4"':' stroke-width="2"')+'/><text class="lb" x="'+(X(k)+4)+'" y="'+y+'" fill="'+col+'">'+txt+'</text>';
+  const f=x=>x.toLocaleString("en-US");
+  if(o.q10!=null&&o.q10>0&&o.q10<=K) gs+=vline(o.q10,"1 成："+f(o.q10),"var(--muted)",true,12);
+  if(o.q50!=null&&o.q50<=K) gs+=vline(o.q50,"一半："+f(o.q50),"var(--muted)",true,26);
+  if(o.q90!=null&&o.q90<=K) gs+=vline(o.q90,"9 成："+f(o.q90),"var(--muted)",true,12);
+  if(n>0) gs+=vline(Math.min(n,K),"你：n = "+f(n),"var(--bar)",false,Tp+12);
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="剛好在第幾'+o.u+'到達目標的機率">'+gs+'</svg>';
+  note.textContent="橫軸是"+o.x+"，縱軸是「剛好在"+o.at+"到達目標」的機率。曲線越高，代表越多人剛好在那"+o.u+"到達。左邊是運氣好、很快就到的人；右邊拖得很長的是運氣差的人。三條虛線由左到右，分別是「1 成的人」「一半的人」「9 成的人」在這之前就到達的"+o.x+"；藍線是你設定的 n，藍線左邊塗色的面積，就是 n "+o.u+"內到達的機率（"+pct(F(Math.min(n,K)))+"）。";
+}
+// 運氣：做了 n 次還沒到的人有多少
+function showLuck(prefix,notYet,show){
+  const L=$("luck"); L.hidden=!(show&&notYet>0.0005); if(L.hidden) return;
+  L.innerHTML=prefix+"，100 個人裡"+(notYet*100<1?"<b>不到 1</b>":notYet*100>99?"<b>超過 99</b>":"大約有 <b>"+Math.round(notYet*100)+"</b>")+" 個。"
+    +(notYet<0.1?"如果你是其中一個，代表運氣比 9 成的人差。":notYet<0.5?"":"還沒到的人比到了的人多，不用太擔心。");
 }
 
 // ===== 止損策略 =====
@@ -478,10 +529,15 @@ function render(){
   if(t.e!==null){ $("kE").textContent="期望總次數（自起點）"; $("sE").textContent=t.e.toFixed(3); }
   else { $("kE").textContent="最終能到達 "+LV(T)+" 的機率"; $("sE").textContent=pct(t.h); }
   $("sMed").textContent = t.med!==null ? t.med : (t.h<=0.5 ? "不會超過 50%" : "> "+MAXN);
+  $("sQ90").textContent = t.q90!==null ? t.q90 : (t.h<0.9 ? "不會超過 90%" : "> "+MAXN);
+  const reachable = T!==cur.start && t.h>0;
+  showLuck("強化了 "+n+" 次還沒到 "+LV(T)+" 的人",1-hit,reachable&&n>0&&T>cur.start);
+  if(reachable&&T>cur.start) drawDist(k=>t.out[Math.min(k,MAXN)*6+T],{K:Math.max(t.qEnd??MAXN,n),q10:t.q10,q50:t.med,q90:t.q90,n,x:"強化次數",at:"這一次",u:"次"});
+  else $("distPanel").hidden=true;
   // 材料表
   const fm=x=>x>=1000?Math.round(x).toLocaleString("en-US"):(+x.toFixed(1)).toLocaleString("en-US");
-  $("mats").tHead.innerHTML="<tr><th>材料</th><th>到第 "+n+" 次為止</th><th>全部完成</th></tr>";
-  $("mats").tBodies[0].innerHTML=MAT.map(([m,q])=>"<tr><td>"+m+'</td><td class="now">'+fm(t.att[n]*q)+'</td><td class="sum">'+fm(t.att[MAXN]*q)+"</td></tr>").join("");
+  $("mats").tHead.innerHTML="<tr><th>材料</th><th>到第 "+n+" 次為止</th><th>全部完成</th><th>9 成把握要準備</th></tr>";
+  $("mats").tBodies[0].innerHTML=MAT.map(([m,q])=>"<tr><td>"+m+'</td><td class="now">'+fm(t.att[n]*q)+'</td><td class="sum">'+fm(t.att[MAXN]*q)+"</td><td>"+(t.q90!==null&&T>cur.start?fm(t.q90*q):"—")+"</td></tr>").join("");
   $("note").textContent = (T<cur.start
       ? "目標低於起始等級：代表「掉到 "+LV(T)+"」的機率。若途中先到達 +15 就會停止，因此最終機率可能小於 100%。"
       : T===cur.start ? "目標等於起始等級：第 0 次就已達成。" : "")
