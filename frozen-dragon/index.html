@@ -188,6 +188,12 @@ td.dropcell{color:var(--bad);font-weight:500}
     <h2>要強化幾次才會到達：機率分布</h2>
     <div id="distChart" class="distchart"></div>
     <ul class="note distlist" id="probNote"></ul>
+    <details class="fold" id="evtWrap">
+      <summary id="evtSum">活動 1.3 倍時差多少</summary>
+      <div id="evtChart" class="distchart"></div>
+      <div class="legend"><span><i class="sw" style="background:var(--muted)"></i>原本（1 倍）</span><span><i class="sw" style="background:var(--goal)"></i><span id="evtLegB">活動（1.3 倍）</span></span></div>
+      <ul class="note distlist" id="evtNote"></ul>
+    </details>
   </section>
 
   <section class="panel stop" id="stopPanel">
@@ -340,6 +346,35 @@ function showLuck(prefix,notYet,show){
   const L=$("luck"); L.hidden=!(show&&notYet>0.0005); if(L.hidden) return;
   L.innerHTML=prefix+"，100 個人裡"+(notYet*100<1?"<b>不到 1</b>":notYet*100>99?"<b>超過 99</b>":"大約有 <b>"+Math.round(notYet*100)+"</b>")+" 個。"
     +(notYet<0.1?"如果你是其中一個，代表運氣比 9 成的人差。":notYet<0.5?"":"還沒到的人比到了的人多，不用太擔心。");
+}
+
+// ===== 活動比較：倍率是 1 或 1.3 時比較 1 倍與 1.3 倍；設定其他倍率時，比較該倍率與 1 倍 =====
+// Fa、Fb：k 次內到達的機率；qa、qb：{q50, q90, K}；o：{x 橫軸名稱, u 單位, why 為什麼（1.3 倍時）, why2 為什麼（其他倍率）}
+function drawEvent(Fa,Fb,qa,qb,m2,n,o){
+  const wrap=$("evtWrap"); wrap.hidden=false;
+  const ev=m2===1.3, nm= ev ? "活動（1.3 倍）" : "倍率 "+m2+" 倍", head=nm.replace(/[（）]/g," ").trim();
+  $("evtLegB").textContent=nm;
+  const pc1=x=>(x*100).toFixed(1)+"%";
+  $("evtSum").textContent = n>0
+    ? head+"時：用你設定的 "+n+" "+o.u+"，到達的機率從原本 1 倍的 "+pc1(Fa(n))+" 提高到 "+pc1(Fb(n))
+    : head+"時：一半的人 "+qb.q50+" "+o.u+"內到達（原本 1 倍要 "+qa.q50+" "+o.u+"）";
+  const K=Math.max(qa.K,n,10), step=Math.max(1,Math.ceil(K/300));
+  const W=640,H=210,Lf=40,Rr=12,Tp=12,Bm=28, X=k=>Lf+(W-Lf-Rr)*k/K, Y=p=>Tp+(H-Tp-Bm)*(1-p);
+  const path=f=>{ let d=""; for(let k=0;k<=K;k+=step) d+=(d?"L":"M")+X(k).toFixed(1)+","+Y(f(k)).toFixed(1); return d+"L"+X(K).toFixed(1)+","+Y(f(K)).toFixed(1); };
+  let gs="";
+  for(const p of [0,.25,.5,.75,1]) gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(p)+'" y2="'+Y(p)+'" stroke="var(--line)"/><text x="'+(Lf-6)+'" y="'+(Y(p)+4)+'" text-anchor="end">'+(p*100)+'%</text>';
+  for(const k of [0,Math.round(K/2),K]) gs+='<text x="'+X(k)+'" y="'+(H-8)+'" text-anchor="middle">'+k.toLocaleString("en-US")+'</text>';
+  gs+='<path d="'+path(Fa)+'" fill="none" stroke="var(--muted)" stroke-width="2"/><path d="'+path(Fb)+'" fill="none" stroke="var(--goal)" stroke-width="2"/>';
+  if(n>0&&n<=K) gs+='<line x1="'+X(n)+'" x2="'+X(n)+'" y1="'+Tp+'" y2="'+(H-Bm)+'" stroke="var(--bar)" stroke-width="2"/><text class="lb" x="'+(X(n)+4)+'" y="'+(Tp+12)+'" fill="var(--bar)">你：n = '+n+'</text>';
+  $("evtChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="原本與'+nm+'在 n '+o.u+'內到達的機率">'+gs+'</svg>';
+  $("evtNote").innerHTML=["<b>橫軸</b>："+o.x+"。",
+    "<b>縱軸</b>：這麼多"+o.u+"內到達目標的機率。",
+    "<b>兩條線</b>：灰線是原本 1 倍，橘線是"+(ev?"活動 1.3 倍":"倍率 "+m2+" 倍")+"。兩條線之間的距離，就是"+(ev?"活動":"提高倍率")+"多出來的機會。",
+    "<b>一半的人</b>："+qb.q50+" "+o.u+"內到達（原本 1 倍要 "+qa.q50+" "+o.u+"）。",
+    "<b>9 成的人</b>："+(qb.q90??"—")+" "+o.u+"內到達（原本 1 倍要 "+(qa.q90??"—")+" "+o.u+"）。",
+    ev?o.why:o.why2]
+    .concat(ev?["<b>比較的倍率</b>：倍率設成 1 或 1.3 時，比較 1 倍和 1.3 倍；設成其他倍率時，比較那個倍率和 1 倍。"]:[])
+    .map(x=>"<li>"+x+"</li>").join("");
 }
 
 // ===== 止損策略 =====
@@ -538,7 +573,13 @@ function render(){
   $("sQ90").textContent = t.q90!==null ? t.q90 : (t.h<0.9 ? "不會超過 90%" : "> "+MAXN);
   const reachable = T!==cur.start && t.h>0;
   showLuck("強化了 "+n+" 次還沒到 "+LV(T)+" 的人",1-hit,reachable&&n>0&&T>cur.start);
-  if(reachable&&T>cur.start) drawDist(k=>t.out[Math.min(k,MAXN)*6+T],{K:Math.max(t.qEnd??MAXN,n),q10:t.q10,q50:t.med,q90:t.q90,n,x:"強化次數",at:"這一次",u:"次"});
+  if(reachable&&T>cur.start){
+    drawDist(k=>t.out[Math.min(k,MAXN)*6+T],{K:Math.max(t.qEnd??MAXN,n),q10:t.q10,q50:t.med,q90:t.q90,n,x:"強化次數",at:"這一次",u:"次"});
+    const m2=(cur.mult===1||cur.mult===1.3)?1.3:cur.mult, A=table(cur.start,T,1), Bt=table(cur.start,T,m2), Fo=tt=>k=>tt.out[Math.min(k,MAXN)*6+T];
+    if(A.med!==null&&Bt.med!==null) drawEvent(Fo(A),Fo(Bt),{q50:A.med,q90:A.q90,K:A.qEnd??MAXN},{q50:Bt.med,q90:Bt.q90},m2,n,
+      {x:"強化次數",u:"次",why:"<b>為什麼省得比 30% 還多</b>：成功率提高的同時，失敗倒退的次數也跟著變少。",why2:"<b>為什麼省得比倍率看起來還多</b>：成功率提高的同時，失敗倒退的次數也跟著變少。"});
+    else $("evtWrap").hidden=true;
+  }
   else $("distPanel").hidden=true;
   // 材料表
   const fm=x=>x>=1000?Math.round(x).toLocaleString("en-US"):(+x.toFixed(1)).toLocaleString("en-US");
