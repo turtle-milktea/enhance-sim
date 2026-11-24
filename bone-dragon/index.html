@@ -253,7 +253,7 @@ header .fold.rules{margin-top:10px}
       </details>
       <details class="adv">
         <summary>參考：提早或延後收手，結果會怎麼變</summary>
-        <p class="note" id="slChartNote"></p>
+        <ul class="note distlist" id="slChartNote"></ul>
         <div id="slChart" class="slchart"></div>
       </details>
     </div>
@@ -818,7 +818,7 @@ function renderStop(){
   $("slExplain").innerHTML=ex.join("");
   drawStopChart(R,n,Ts,T50);
   let mxD=0; for(let t=0;t<=n;t++) mxD=Math.max(mxD,R[t*3+2]);
-  chartNote(mxD,Ts,T50,"只要停在起點","到達目標");
+  chartNote(mxD,Ts,T50,"只要停在起點（"+S+"）","到達目標",{n,act:"強化",down:"最後低於 "+S});
   showBenefit(base,strat,Ts,n,S,"掉到 "+S+" 以下");
 }
 // 止損的好處：放在「止損點的決定方式」下面的提示
@@ -833,12 +833,20 @@ function showBenefit(base,st,Ts,n,S,word){
   el.hidden=false;
 }
 // 參考圖的說明：依照圖上實際畫出來的線來寫
-function chartNote(maxDown,Ts,T50,stopWord,reach){
-  const t=["怎麼看這張圖：橫軸是止損次數 T（第 T 次之後，"+stopWord+"就收手），縱軸是用完預算後的結果機率。"];
-  if(maxDown<0.005) t.push("橘線是「"+reach+"」。這個設定下，不論 T 是多少，倒退的機率都幾乎是 0，所以代表倒退的紅線貼在最下面的 0% 線上，看不出來；這時 T 越往右，"+reach+"的機會越高。");
-  else t.push("橘線是「"+reach+"」，紅線是「倒退」。T 越往右越積極，"+reach+"的機會增加，但倒退的風險也增加；T 越往左越保守。可以用這張圖看「多冒一點倒退風險，能換到多少"+reach+"的機會」。");
-  t.push(Ts===T50 ? "藍色直線是目前採用的 T，剛好就是預設建議的 T。" : "藍色直線是目前採用的 T，灰色虛線是預設建議的 T。");
-  $("slChartNote").textContent=t.join("");
+function chartNote(maxDown,Ts,T50,stopWord,reach,o){
+  // o = {n 預算次數, act 「強化」或「重抽」, down 倒退的意思}
+  const n=o.n, act=o.act, flat=maxDown<0.005, t=[
+    "<b>T 的定義</b>：止損次數。前 T 次照常"+act+"；第 T 次以後，"+stopWord+"就收手。T 的範圍是 0 到 n（n = "+n+"）：T = 0 表示一開始就不"+act+"，T = n 表示不止損，一直"+act+"到 n 次用完。",
+    "<b>橫軸</b>：T。",
+    "<b>縱軸</b>：照「第 T 次以後收手」的做法，"+act+"結束時各種結果的機率。",
+    "<b>橘線</b>："+reach+"的機率。",
+    flat ? "<b>紅線</b>：倒退（"+o.down+"）的機率。這個設定下不論 T 是多少，倒退的機率都幾乎是 0，所以紅線貼在 0% 的線上，看不出來。"
+         : "<b>紅線</b>：倒退（"+o.down+"）的機率。",
+    flat ? "<b>怎麼讀</b>：T 越大（越往右），"+reach+"的機會越高。"
+         : "<b>怎麼讀</b>：T 越大（越往右）越積極，"+reach+"的機會增加，但倒退的風險也增加；T 越小（越往左）越保守。可以用這張圖看「多冒一點倒退風險，能換到多少"+reach+"的機會」。",
+    Ts===T50 ? "<b>藍色直線</b>：目前採用的 T（= "+Ts+"），剛好就是預設建議的 T。"
+             : "<b>藍色直線</b>：目前採用的 T（= "+Ts+"）。<b>灰色虛線</b>：預設建議的 T（= "+T50+"）。"];
+  $("slChartNote").innerHTML=t.map(x=>"<li>"+x+"</li>").join("");
 }
 function drawStopChart(R,n,Ts,T50){
   const W=640,H=230,L=40,Rr=12,Tp=12,B=28, X=t=>L+(W-L-Rr)*t/n, Y=p=>Tp+(H-Tp-B)*(1-p);
