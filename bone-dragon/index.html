@@ -138,6 +138,7 @@ header .fold.rules{margin-top:10px}
 .benefit{margin:0 0 14px;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel));line-height:1.6}
 .stop #slAtT th{white-space:normal;vertical-align:bottom}
 .stop #slAtT th:first-child{min-width:5em}
+#slMats th:not(:first-child){white-space:nowrap}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -758,8 +759,8 @@ function renderStop(){
     const em=endModes(sl,Ts), f1=x=>(Math.round(x*10)/10).toLocaleString("en-US");
     $("slEndH").textContent=(mode==="r50"?"照建議強化":"照這個止損點強化")+"，最後會怎麼結束";
     const rowsE=[["衝上目標，提前結束",em.P[0],em.avg[0]],["第 "+Ts+" 次後回到 "+S+"，收手",em.P[1],em.avg[1]],[n+" 次全部用完，還沒到達目標",em.P[2],em.avg[2]]];
-    $("slMats").tHead.innerHTML="<tr><th>怎麼結束</th><th>這樣結束的機率</th><th>用掉的次數</th><th>沒用到、可以留著的</th></tr>";
-    $("slMats").tBodies[0].innerHTML=rowsE.map(([lb,p,a],k)=>"<tr><td>"+lb+"</td><td>"+pc(p)+"</td><td>"+(a===null?"—":k===2?n+" 次":"平均 "+f1(a)+" 次")+"</td><td>"+(a===null||k===2?"—":"平均 "+f1(n-a)+" 次份")+"</td></tr>").join("");
+    $("slMats").tHead.innerHTML="<tr><th>怎麼結束</th><th>機率</th><th>平均強化</th><th>剩餘次數</th></tr>";
+    $("slMats").tBodies[0].innerHTML=rowsE.map(([lb,p,a],k)=>"<tr><td>"+lb+"</td><td>"+pc(p)+"</td><td>"+(a===null?"—":f1(a))+"</td><td>"+(a===null?"—":f1(n-a))+"</td></tr>").join("");
     $("slEndNote").innerHTML=["三種結束方式的機率加起來是 100%。第一列就是上方長條圖的「到達」。",
       "止損只會影響第二種結束方式，最多省下 "+n+" − "+Ts+" = "+(n-Ts)+" 次的材料。止損主要的好處是降低倒退的機率，不是省材料。"].map(x=>"<li>"+x+"</li>").join("");
   }
