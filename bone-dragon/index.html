@@ -139,6 +139,42 @@ header .fold.rules{margin-top:10px}
 .stop #slAtT th{white-space:normal;vertical-align:bottom}
 .stop #slAtT th:first-child{min-width:5em}
 #slMats th:not(:first-child){white-space:nowrap}
+.modes{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:10px}
+.modes button{border:0;border-radius:0;padding:6px 14px;background:var(--panel);color:var(--muted)}
+.modes button[aria-pressed="true"]{background:var(--bar);color:#fff;font-weight:600}
+.modeHint{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+body.simple .pro-only{display:none!important}
+body.multi .single-only{display:none!important}
+body:not(.multi) .multi-only{display:none!important}
+.cntsw{margin:0 0 12px;align-self:flex-start}
+.mit{display:grid;grid-template-columns:4.5em 1fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.mit:last-child{border-bottom:1px solid var(--line)}
+.mit .nm{font-weight:500}
+.mplan{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mplan select{width:auto}
+.mevw{display:inline-flex;gap:6px;align-items:center;margin-left:6px}
+.vbox{padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel))}
+.vlab{font-size:.82rem;font-weight:600;color:var(--goal);margin-bottom:2px}
+.vbox .verdict{margin:0}
+.mstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.mstats .stat{background:var(--track);border-radius:8px;padding:10px 12px}
+#mPerT th:not(:last-child){text-align:left}
+.multi-panel td.t{font-family:var(--sans);text-align:left;white-space:normal}
+.multi-panel tr.best td{background:color-mix(in srgb,var(--goal) 10%,transparent)}
+.multi-panel .tblwrap td{font-family:var(--mono)}
+.multi-panel .tblwrap td.t{font-family:var(--sans)}
+.multi-panel .tblwrap th:first-child,.multi-panel .tblwrap td:first-child{text-align:left;white-space:normal}
+.multi-panel .tblwrap th,.multi-panel .tblwrap td{text-align:right}
+.multi-panel .tblwrap td.t{text-align:left}
+body:not(.simple) .simple-only{display:none!important}
+.sgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.sgrid .stat{background:var(--track);border-radius:8px;padding:8px 10px}
+.sgrid .stat .v{font-size:1.1rem}
+.stat.up .v{color:var(--goal)} .stat.down .v{color:var(--drop)}
+.slines{margin:12px 0 0;padding-left:1.3em;font-size:.92rem;line-height:1.7;display:flex;flex-direction:column;gap:4px}
+.multbtn input.on{border:2px solid var(--bar)}
+.multbtn button.on{border:2px solid var(--bar);padding:5px 9px;font-weight:600}
+@media (max-width:480px){.sgrid .stat .k{font-size:.76rem}}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -148,19 +184,22 @@ header .fold.rules{margin-top:10px}
   <header>
     <a class="back" href="../">← 回到目錄</a>
     <h1>骨龍・金龍裝備強化模擬</h1>
+    <div class="modes" role="group" aria-label="版本"><button id="modeS" aria-pressed="true">簡易版</button><button id="modeP" aria-pressed="false">專業版</button></div>
+    <p class="modeHint" id="modeHint"></p>
     <details class="fold rules">
       <summary>規則說明</summary>
       <ol class="sub rules-list">
         <li>依強化表計算，不考慮破壞（果凍數量照常計算）。每次強化不論成功或失敗都會消耗材料。</li>
         <li>骨龍：強化到 +12、+14、+16、+18、+20 失敗時，50% 下降一級、50% 不變。</li>
         <li>金龍：強化到 +15、+17、+19 失敗時，50% 下降一級、50% 不變。</li>
-        <li>骨龍 +15 以上可以進化為金龍 +10（進化不算一次強化），金龍不能換回骨龍。</li>
+        <li>骨龍 +15～+20 可以進化成金龍，進化後的等級是骨龍等級減 5（例如骨龍 +15 → 金龍 +10、骨龍 +17 → 金龍 +12）。進化不算一次強化，金龍不能換回骨龍。</li>
         <li>遇到機率活動時，可調整成功率倍率（1～10）：所有成功率未滿 100% 的階段都乘上倍率，超過 100% 時以 100% 計。</li>
         <li>拖動拉桿，查看強化 n 次後停在各等級的機率。</li>
+        <li>多件裝備一起強化：武器 2 件或防具 5 件各自設定起點和目標，共用同一份強化次數，每次強化只對其中一件。</li>
         <li>止損就是「見好就收」：前面照常強化；快沒次數的時候，只要回到原本的等級就停下來，免得最後掉得比原本還低。代價是衝上目標的機會會少一點，所以要在「少掉下去」和「多衝上去」之間取捨。</li>
       </ol>
     </details>
-    <p class="meta">製作日期：2026-11-12・更新日期：2026-11-18</p>
+    <p class="meta">製作日期：2026-11-12・更新日期：2026-11-25</p>
   </header>
 
   <section class="panel howto" aria-label="怎麼看機率">
@@ -169,61 +208,101 @@ header .fold.rules{margin-top:10px}
   </section>
 
   <section class="panel controls">
+    <div class="modes cntsw" role="group" aria-label="裝備數量"><button id="cnt1" aria-pressed="true">強化一件裝備</button><button id="cntM" aria-pressed="false">多件裝備一起強化</button></div>
     <div class="row" style="justify-content:space-between">
-      <div><label>強化次數 n</label><div class="n-big" id="nShow">0</div></div>
+      <div class="pro-only single-only"><label>強化次數 n</label><div class="n-big" id="nShow">0</div></div>
       <div class="row">
         <span class="pair"><label for="part">部位</label><select id="part" autocomplete="off"><option value="armor" selected>防具</option><option value="weapon">武器</option></select></span>
-        <span class="pair"><label for="start">起點</label><select id="start" autocomplete="off"></select></span>
-        <span class="pair"><label for="target">目標</label><select id="target" autocomplete="off"></select></span>
-        <span class="pair" id="evoWrap"><label for="evo">進化時機</label><select id="evo" autocomplete="off"></select></span>
+        <span class="pair single-only"><label for="start">起點</label><select id="start" autocomplete="off"></select></span>
+        <span class="pair single-only"><label for="target">目標</label><select id="target" autocomplete="off"></select></span>
+        <span class="pair single-only" id="evoWrap"><label for="evo">進化時機</label><select id="evo" autocomplete="off"></select></span>
       </div>
     </div>
-    <input type="range" id="slider" autocomplete="off" min="0" max="200" value="0" aria-label="強化次數">
+    <input type="range" class="pro-only single-only" id="slider" autocomplete="off" min="0" max="200" value="0" aria-label="強化次數">
     <div class="row">
-      <button id="dec">−1</button><button id="inc">+1</button>
-      <span class="pair"><label for="nInput">直接輸入</label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="0"></span>
-      <span class="pair"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
-      <span class="hint" id="multHint"></span>
-      <span class="pair"><label for="maxN">拉桿上限</label><select id="maxN" autocomplete="off"><option selected>200</option><option>1000</option><option>5000</option><option>20000</option></select></span>
-      <span class="pair"><label for="scale">橫軸</label><select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
+      <button id="dec" class="pro-only single-only">−1</button><button id="inc" class="pro-only single-only">+1</button>
+      <span class="pair single-only"><label for="nInput"><span class="pro-only">直接輸入</span><span class="simple-only">打算強化幾次</span></label><input type="number" id="nInput" autocomplete="off" min="0" max="20000" value="0"></span>
+      <span class="pair simple-only multbtn"><span class="lab">機率</span><button id="sm1">平常（1 倍）</button><button id="sm13">活動（1.3 倍）</button><input type="number" id="smC" inputmode="decimal" min="1" max="10" step="0.05" placeholder="自訂" aria-label="自訂倍率（1～10）" autocomplete="off" style="width:5.5em"></span>
+      <span class="pair pro-only"><label for="mult">成功率倍率</label><input type="number" id="mult" autocomplete="off" min="1" max="10" step="0.05" value="1" aria-describedby="multHint"></span>
+      <span class="pro-only"><span class="hint" id="multHint"></span></span>
+      <span class="hint simple-only" id="smHint"></span>
+      <span class="pair pro-only single-only"><label for="maxN">拉桿上限</label><select id="maxN" autocomplete="off"><option selected>200</option><option>1000</option><option>5000</option><option>20000</option></select></span>
+      <span class="pair pro-only single-only"><label for="scale">橫軸</label><select id="scale" autocomplete="off"><option value="lin">線性</option><option value="log">對數</option></select></span>
     </div>
-    <div class="conv">
+    <div class="conv pro-only single-only">
       <span class="lab">用材料換算強化次數</span>
       <span class="pair" id="convBW"><label for="convB">骨龍的骨片</label><input type="number" id="convB" autocomplete="off" min="0" step="1" placeholder="手上的數量"></span>
       <span class="pair" id="convGW"><label for="convG">金龍的寶玉碎片</label><input type="number" id="convG" autocomplete="off" min="0" step="1" placeholder="手上的數量"></span>
       <span class="convOut" id="convOut"></span>
       <button id="convApply" hidden>套用到強化次數</button>
     </div>
+    <div class="multi-only" id="mCtl">
+      <h2 style="margin-top:14px">每件裝備的強化計畫</h2>
+      <div id="mItems"></div>
+      <div class="row" style="margin-top:14px;justify-content:space-between">
+        <div class="pro-only"><span class="lab">合計的強化次數</span><div class="n-big" id="mNShow"></div></div>
+        <span class="pair"><label for="mN"><span class="pro-only">直接輸入</span><span class="simple-only">全部裝備合計打算強化幾次</span></label><input type="number" id="mN" autocomplete="off" min="0" max="5000"></span>
+      </div>
+      <input type="range" class="pro-only" id="mSlider" autocomplete="off" min="0" max="2000" aria-label="合計的強化次數">
+      <div class="slctl pro-only" style="margin-top:12px">
+        <label for="mSlMode">止損點的決定方式</label>
+        <select id="mSlMode" autocomplete="off">
+          <option value="r50" selected>推薦的做法（掉下去還有一半的機會爬回來，就繼續衝）</option>
+          <option value="risk">指定可接受的倒退機率</option>
+          <option value="custom">我自己決定第幾次後收手</option>
+          <option value="none">不止損（次數全部用完）</option></select>
+        <span class="pair" id="mSlRiskWrap" hidden><label for="mSlRisk">可接受的倒退機率</label><input type="number" id="mSlRisk" autocomplete="off" min="0" max="100" step="1" value="10"><span class="lab">%</span></span>
+        <span class="pair" id="mSlTWrap" hidden><label for="mSlT">第幾次後收手</label><input type="number" id="mSlT" autocomplete="off" min="0" max="5000" step="1" value="0"></span>
+      </div>
+      <p class="matsNote" id="mMatHint"></p>
+    </div>
   </section>
 
-  <section class="panel">
-    <div class="hchart" id="chart" role="img" aria-label="強化 n 次後停在各等級的機率"></div>
+  <section class="panel multi-only multi-panel" aria-label="多件裝備的建議與結果">
+    <h2>止損策略</h2>
+    <div class="vbox"><div class="vlab">建議策略</div><p class="verdict" id="mVerdict"></p></div>
+    <div class="mstats" id="mStats"></div>
+    <div class="tblwrap"><table id="mPerT"></table></div>
+    <p class="matsNote" id="mCmp1" style="font-size:.9rem;color:var(--fg)"></p>
+    <div class="pro-only">
+      <h3 class="rulesH">為什麼這樣做</h3>
+      <ul class="explain" id="mWhy"></ul>
+      <details class="fold">
+        <summary>比較不同做法</summary>
+        <div class="tblwrap"><table id="mCmpT"></table></div>
+        <ul class="matsNote distlist"><li id="mCmpNote"></li></ul>
+      </details>
+      <details class="fold">
+        <summary>最後達成幾件</summary>
+        <div class="tblwrap"><table id="mCntT"></table></div>
+        <ul class="matsNote distlist"><li>依建議的做法計算。</li></ul>
+      </details>
+      <details class="fold">
+        <summary>策略解讀</summary>
+        <div id="mDetail"></div>
+      </details>
+    </div>
   </section>
 
-  <section class="panel stats">
-    <div class="stat"><div class="k" id="kHit"></div><div class="v" id="sHit"></div></div>
-    <div class="stat"><div class="k" id="kNot"></div><div class="v" id="sNot"></div></div>
-    <div class="stat"><div class="k">期望強化次數</div><div class="v" id="sE"></div></div>
-    <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
-    <div class="stat"><div class="k">達成 90% 機率所需次數</div><div class="v" id="sQ90"></div></div>
-    <p class="luck" id="luck" hidden></p>
+  <section class="single-only panel simple-only" id="simplePanel" aria-label="建議">
+    <h2>止損策略</h2>
+    <p class="verdict" id="sVerdict"></p>
+    <div id="sGrid">
+      <div class="sbars" id="sBars"></div>
+      <div class="legend"><span><i class="sw up"></i>衝上目標</span><span><i class="sw keep"></i>沒衝上，但沒變差</span><span><i class="sw down"></i>比原本低</span></div>
+      <p class="benefit" id="sBenefit" style="margin:12px 0 0" hidden></p>
+    </div>
+    <h3 class="rulesH" id="sMoreH">其他參考</h3>
+    <ul class="slines" id="sLines"></ul>
   </section>
 
-  <section class="panel dist">
-    <h2>要強化幾次才會到達：機率分布</h2>
-    <div id="distChart" class="distchart"></div>
-    <ul class="note distlist" id="probNote"></ul>
-    <details class="fold" id="evtWrap">
-      <summary id="evtSum">活動 1.3 倍時差多少</summary>
-      <div class="evtNeedRow"><span class="pair"><label for="evtP">想要的機率</label><input type="number" id="evtP" autocomplete="off" min="0.1" max="99.9" step="0.1" value=""><span class="lab">%</span></span></div>
-      <p class="evtNeed" id="evtNeed"></p>
-      <div id="evtChart" class="distchart"></div>
-      <div class="legend"><span><i class="sw" style="background:var(--muted)"></i>原本（1 倍）</span><span><i class="sw" style="background:var(--goal)"></i><span id="evtLegB">活動（1.3 倍）</span></span></div>
-      <ul class="note distlist" id="evtNote"></ul>
-    </details>
+  <section class="single-only panel simple-only mats" id="simpleMats">
+    <h2 id="sMatsTitle"></h2>
+    <div class="tblwrap" style="margin-top:0"><table id="sMatsT"><thead></thead><tbody></tbody></table></div>
+    <ul class="matsNote distlist" id="sMatsNote"></ul>
   </section>
 
-  <section class="panel stop" id="stopPanel">
+  <section class="single-only panel stop pro-only" id="stopPanel">
     <h2>止損策略</h2>
     <p class="verdict" id="slVerdict"></p>
     <p class="count" id="slCount" hidden></p>
@@ -259,13 +338,41 @@ header .fold.rules{margin-top:10px}
     </div>
   </section>
 
-  <section class="panel mats">
+  <section class="single-only panel pro-only">
+    <div class="hchart" id="chart" role="img" aria-label="強化 n 次後停在各等級的機率"></div>
+  </section>
+
+  <section class="single-only panel stats pro-only">
+    <div class="stat"><div class="k" id="kHit"></div><div class="v" id="sHit"></div></div>
+    <div class="stat"><div class="k" id="kNot"></div><div class="v" id="sNot"></div></div>
+    <div class="stat"><div class="k">期望強化次數</div><div class="v" id="sE"></div></div>
+    <div class="stat"><div class="k">機率首次超過 50% 的 n</div><div class="v" id="sMed"></div></div>
+    <div class="stat"><div class="k">達成 90% 機率所需次數</div><div class="v" id="sQ90"></div></div>
+    <p class="luck" id="luck" hidden></p>
+  </section>
+
+  <section class="single-only panel dist pro-only">
+    <h2>要強化幾次才會到達：機率分布</h2>
+    <div id="distChart" class="distchart"></div>
+    <ul class="note distlist" id="probNote"></ul>
+    <details class="fold" id="evtWrap">
+      <summary id="evtSum">活動 1.3 倍時差多少</summary>
+      <div class="evtNeedRow"><span class="pair"><label for="evtP">期望到達目標的機率</label><input type="number" id="evtP" autocomplete="off" min="0.1" max="99.9" step="0.1" value=""><span class="lab">%</span></span></div>
+      <p class="evtNeed" id="evtNeed"></p>
+      <div id="evtChart" class="distchart"></div>
+      <div class="legend"><span><i class="sw" style="background:var(--muted)"></i>原本（1 倍）</span><span><i class="sw" style="background:var(--goal)"></i><span id="evtLegB">活動（1.3 倍）</span></span></div>
+      <ul class="note distlist" id="evtNote"></ul>
+    </details>
+  </section>
+
+
+  <section class="single-only panel mats pro-only">
     <h2 id="matsTitle">材料期望值</h2>
     <div class="tblwrap" style="margin-top:0"><table id="mats"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
     <ul class="matsNote distlist"><li><b>到第 n 次為止</b>：強化 n 次時，平均已經用掉的材料。到達目標就會停下來，所以 n 夠大時會等於「全部完成」。進化材料以「n 次內已經進化的機率」計入。</li><li><b>全部完成</b>，以及骨龍、金龍、進化各欄：從起點一直強化到到達目標，平均會用掉的材料。</li><li><b>9 成把握要準備</b>：要有 9 成的機會到達目標，需要準備的材料。每次用量固定的材料是精確值；其他材料標「約」，是依強化次數推算的參考值。</li></ul>
   </section>
 
-  <ul class="note distlist" id="note"><li>橫軸選「對數」時，最小顯示到 0.0001%。</li><li>橘色是目標，金色是金龍階段。</li><li>到達進化時機時會立刻進化；進化不算一次強化。</li></ul>
+  <ul class="single-only note distlist pro-only" id="note"><li>橫軸選「對數」時，最小顯示到 0.0001%。</li><li>橘色是目標，金色是金龍階段。</li><li>到達進化時機時會立刻進化；進化不算一次強化。</li></ul>
 
   <section class="panel">
     <details>
@@ -274,7 +381,7 @@ header .fold.rules{margin-top:10px}
       <div class="tblwrap"><table id="rulesBone"><thead></thead><tbody></tbody></table></div>
       <p class="rulesH" id="rulesGoldH"></p>
       <div class="tblwrap"><table id="rulesGold"><thead></thead><tbody></tbody></table></div>
-      <p class="rulesH">進化（骨龍 +15～+20 → 金龍 +10）</p>
+      <p class="rulesH">進化（骨龍 +15～+20 → 金龍 +10～+15，等級減 5）</p>
       <div class="tblwrap"><table id="rulesEvo"><thead><tr><th>材料</th><th>數量</th></tr></thead><tbody></tbody></table></div>
     </details>
   </section>
@@ -320,7 +427,8 @@ const EQ={
         "金龍的寶玉碎片":Z.concat([0,0,0,0,0,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5])}}}};
 const EVOLVE={"金龍的鱗片粉末":10,"金龍的逆鱗粉末":10,"金龍的寶玉碎片":10,"金幣":100000};
 const MAT_ORDER=["金幣","果凍","骨龍的骨片","高級石榴石","高級生命淨水","金龍的鱗片粉末","金龍的逆鱗粉末","金龍的寶玉碎片"];
-const TOP=20, MAXN=20000, MULT_MIN=1, MULT_MAX=10, EVO_MIN=15, EVO_TO=10;
+const TOP=20, MAXN=20000, MULT_MIN=1, MULT_MAX=10, EVO_MIN=15, EVO_DROP=5;
+const evoTo=e=>e-EVO_DROP;   // 骨龍 +e 進化成金龍 +(e−5)
 const $=id=>document.getElementById(id);
 const rate=(eq,k,m)=> EQ[eq].rate[k]>=1 ? 1 : Math.min(1,EQ[eq].rate[k]*m);
 // 狀態以字串表示，例如 "bone-12"、"gold-10"
@@ -331,20 +439,20 @@ let cache={}, cur={part:"armor",start:"bone-0",target:"gold-20",evo:15,n:0,mult:
 function segments(c){
   const s=parse(c.start), t=parse(c.target);
   if(s.eq===t.eq) return [{eq:s.eq,from:s.lv,to:t.lv,evolveAfter:false}];
-  return [{eq:"bone",from:s.lv,to:c.evo,evolveAfter:true},{eq:"gold",from:EVO_TO,to:t.lv,evolveAfter:false}];
+  return [{eq:"bone",from:s.lv,to:c.evo,evolveAfter:true},{eq:"gold",from:evoTo(c.evo),to:t.lv,evolveAfter:false}];
 }
 // 某段可能降到的最低等級：起點的下一階若會降級，最低降到起點 −1
 const floorOf=(eq,from)=> EQ[eq].drop.has(from+1) ? from-1 : from;
 
-// 轉移：成功升一級（到達該段終點時，若需進化則立即變成金龍 +10）；失敗依規則降一級或不變
+// 轉移：成功升一級（到達該段終點時，若需進化則立即變成金龍 +(進化時機 − 5)）；失敗依規則降一級或不變
 function buildChain(c,m){
   const segs=segments(c), tKey=c.target, states=[], idx={};
-  for(const sg of segs) for(let k=floorOf(sg.eq,sg.from);k<sg.to;k++){ const s=key(sg.eq,k); if(!(s in idx)){ idx[s]=states.length; states.push(s); } }
+  for(const sg of segs) if(sg.from<sg.to) for(let k=floorOf(sg.eq,sg.from);k<sg.to;k++){ const s=key(sg.eq,k); if(!(s in idx)){ idx[s]=states.length; states.push(s); } }
   idx[tKey]=states.length; states.push(tKey);
   const T=[];   // T[i] = [[j,p],...]
-  for(const sg of segs) for(let k=floorOf(sg.eq,sg.from);k<sg.to;k++){
+  for(const sg of segs) if(sg.from<sg.to) for(let k=floorOf(sg.eq,sg.from);k<sg.to;k++){
     const i=idx[key(sg.eq,k)], p=rate(sg.eq,k+1,c.mult??m), f=1-p, out=[];
-    const up = (k+1===sg.to) ? (sg.evolveAfter ? key("gold",EVO_TO) : tKey) : key(sg.eq,k+1);
+    const up = (k+1===sg.to) ? (sg.evolveAfter ? key("gold",evoTo(c.evo)) : tKey) : key(sg.eq,k+1);
     out.push([idx[up===tKey?tKey:up],p]);
     if(EQ[sg.eq].drop.has(k+1)){ out.push([idx[key(sg.eq,k-1)],f/2]); out.push([i,f/2]); } else out.push([i,f]);
     T[i]=out.filter(([,q])=>q>0);
@@ -366,7 +474,7 @@ function solve(A,b){
 
 function table(c){
   const ck=[c.part,c.start,c.target,c.evo,c.mult].join("|"); if(cache[ck]) return cache[ck];
-  const {states,idx,T,segs}=buildChain(c,c.mult), S=states.length, g=idx[c.target], s0=idx[c.start] ?? idx[key("gold",EVO_TO)];
+  const {states,idx,T,segs}=buildChain(c,c.mult), S=states.length, g=idx[c.target], s0=idx[c.start] ?? idx[key("gold",evoTo(c.evo))];
   // 逐次推算 0..MAXN 次後的分布
   const out=new Float64Array((MAXN+1)*S); let v=new Float64Array(S); v[s0]=1;
   let med=null, q10=null, q90=null, q99=null;
@@ -413,10 +521,10 @@ function fillSelect(sel,groups){
     for(const [v,t,dis] of opts){ const o=new Option(t,v); o.disabled=!!dis; og.appendChild(o); } sel.appendChild(og); }
 }
 fillSelect($("start"),[["骨龍",Array.from({length:TOP},(_,k)=>[key("bone",k),"骨龍 +"+k])],["金龍",Array.from({length:TOP},(_,k)=>[key("gold",k),"金龍 +"+k])]]);
-// 目標：骨龍只能到骨龍或進化成金龍（金龍 +10 以上）；金龍只能到更高的金龍
+// 目標：骨龍只能到骨龍或進化成金龍（不低於最早可能進化成的等級）；金龍只能到更高的金龍
 function targetAllowed(t,s){
   const S=parse(s), T=parse(t);
-  if(S.eq==="bone") return T.eq==="bone" ? T.lv>S.lv : T.lv>=EVO_TO;
+  if(S.eq==="bone") return T.eq==="bone" ? T.lv>S.lv : T.lv>=evoTo(Math.max(EVO_MIN,S.lv));
   return T.eq==="gold" && T.lv>S.lv;
 }
 function refreshTargets(){
@@ -430,9 +538,10 @@ function refreshTargets(){
   // 進化時機：只在骨龍 → 金龍時顯示，選項不低於起點
   const S=parse(cur.start), Tg=parse(cur.target), need=S.eq==="bone"&&Tg.eq==="gold";
   $("evoWrap").hidden=!need;
-  const lo=Math.max(EVO_MIN,S.lv);
-  fillSelect($("evo"),[["骨龍",Array.from({length:TOP-EVO_MIN+1},(_,i)=>[String(EVO_MIN+i),"骨龍 +"+(EVO_MIN+i)+" 時進化",EVO_MIN+i<lo])]]);
-  if(cur.evo<lo) cur.evo=lo;
+  // 進化後的等級不能超過目標：骨龍 +e 進化成金龍 +(e−5) ≤ 目標
+  const lo=Math.max(EVO_MIN,S.lv), hi=need?Math.min(TOP,Tg.lv+EVO_DROP):TOP;
+  fillSelect($("evo"),[["骨龍",Array.from({length:TOP-EVO_MIN+1},(_,i)=>[String(EVO_MIN+i),"骨龍 +"+(EVO_MIN+i)+" 時進化（→ 金龍 +"+evoTo(EVO_MIN+i)+"）",EVO_MIN+i<lo||EVO_MIN+i>hi])]]);
+  if(cur.evo<lo) cur.evo=lo; if(cur.evo>hi) cur.evo=hi;
   $("evo").value=String(cur.evo);
 }
 
@@ -440,12 +549,13 @@ function refreshTargets(){
 const pct=x=>(x*100).toFixed(4)+"%";
 const fmt=x=> x>=1000 ? Math.round(x).toLocaleString("en-US") : (Math.round(x*10)/10).toLocaleString("en-US");
 function render(){
+  if(document.body.classList.contains("multi")){ syncMultBtns(); Multi.show(); return; }
   const t=table(cur), n=cur.n, log=$("scale").value==="log", ch=$("chart");
   ch.innerHTML="";
   let lastEq=null;
   t.states.forEach((s,i)=>{
     const {eq,lv}=parse(s);
-    if(lastEq!==null && eq!==lastEq){ const d=document.createElement("div"); d.className="sepl"; d.textContent="↓ 進化（骨龍 +"+cur.evo+" → 金龍 +"+EVO_TO+"）"; ch.appendChild(d); }
+    if(lastEq!==null && eq!==lastEq){ const d=document.createElement("div"); d.className="sepl"; d.textContent="↓ 進化（骨龍 +"+cur.evo+" → 金龍 +"+evoTo(cur.evo)+"）"; ch.appendChild(d); }
     lastEq=eq;
     const p=t.out[n*t.S+i], w=log?(p<=1e-6?0:(Math.log10(p)+6)/6):p;
     const r=document.createElement("div"); r.className="hrow"+(eq==="gold"?" gold":"")+(i===t.g?" goal":"");
@@ -483,6 +593,7 @@ function render(){
   }).join("");
   renderConv(t);
   renderStop();
+  renderSimple(t);
 }
 
 
@@ -525,7 +636,7 @@ function drawEventBone(){
   if(!(a.E>0)||a.med===null||b.med===null){ $("evtWrap").hidden=true; return; }
   const F=t=>k=>t.out[Math.min(k,MAXN)*t.S+t.g];
   drawEvent(F(a),F(b),{q50:a.med,q90:a.q90,K:Math.min(MAXN,a.q99??MAXN)},{q50:b.med,q90:b.q90},m2,n,
-    {x:"強化次數",u:"次",verb:"強化",why:"<b>為什麼省得比 30% 還多</b>：成功率提高的同時，失敗倒退的次數也跟著變少。",why2:"<b>為什麼省得比倍率看起來還多</b>：成功率提高的同時，失敗倒退的次數也跟著變少。"});
+    {x:"強化次數",u:"次",verb:"強化"});
 }
 function drawEvent(Fa,Fb,qa,qb,m2,n,o){
   const wrap=$("evtWrap");
@@ -553,10 +664,12 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
   if(n>0&&n<=K) gs+='<line x1="'+X(n)+'" x2="'+X(n)+'" y1="'+Tp+'" y2="'+(H-Bm)+'" stroke="var(--bar)" stroke-width="2"/><text class="lb" x="'+(X(n)+4)+'" y="'+(Tp+12)+'" fill="var(--bar)">你：n = '+n.toLocaleString("en-US")+'</text>';
   // 想要的機率：兩條曲線各自在第幾箱達到這個機率
   // 想要的機率：預設是「活動倍率強化 n 次」的機率（藍線與橘線的交點），跟著 n 走；玩家自己輸入後，設定沒變之前都用輸入的值
+  let NA=null, NB=null, WW=0;
   { const el=$("evtP"), sig=JSON.stringify(cur), manual=el.dataset.sig===sig&&el.value.trim()!=="";
     let w = manual ? Math.max(0.1,Math.min(99.9,+el.value||50))/100 : (n>0 ? Fb(n) : 0.5);
     w=Math.max(0.001,Math.min(0.999,w)); if(!manual){ el.value=String(Math.round(w*1000)/10); el.dataset.sig=""; }
     const need=f=>{ for(let k=0;k<=MAXN;k++) if(f(k)>=w-1e-12) return k; return null; }, na=need(Fa), nb=need(Fb);
+    NA=na; NB=nb; WW=w;
     gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(w)+'" y2="'+Y(w)+'" stroke="var(--fg)" stroke-dasharray="3 3" opacity=".6"/>';
     for(const [k,col,dy] of [[na,"var(--muted)",14],[nb,"var(--goal)",-6]]) if(k!==null&&k<=K)
       gs+='<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Y(w)+'" y2="'+(H-Bm)+'" stroke="'+col+'" stroke-dasharray="2 3"/><circle cx="'+X(k)+'" cy="'+Y(w)+'" r="4" fill="'+col+'"/><text class="lb" x="'+(X(k)+5)+'" y="'+(Y(w)+dy)+'" fill="'+col+'">'+k.toLocaleString("en-US")+' '+o.u+'</text>';
@@ -567,14 +680,17 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
       ? "用你設定的 "+n.toLocaleString("en-US")+" "+o.u+"："+who+"有 "+pw+" 的機會到達；原本 1 倍要"+o.verb+" "+f(na)+"才有同樣的機會"+saveTxt+"。"
       : "想要有 "+pw+" 的機會到達：原本 1 倍要"+o.verb+" "+f(na)+"，"+who+"要"+o.verb+" "+f(nb)+saveTxt+"。"; }
   $("evtChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="原本與'+nm+'在 n '+o.u+'內到達的機率">'+gs+'</svg>';
-  $("evtNote").innerHTML=["<b>橫軸</b>："+o.x+"。",
-    "<b>縱軸</b>：這麼多"+o.u+"內到達目標的機率。",
-    "<b>兩條線</b>：灰線是原本 1 倍，橘線是"+(ev?"活動 1.3 倍":"倍率 "+m2+" 倍")+"。同一個次數下，兩條線的上下距離，就是"+(ev?"活動":"提高倍率")+"多出來的機會。",
-    "<b>一半的人</b>："+qb.q50.toLocaleString("en-US")+" "+o.u+"內到達（原本 1 倍要 "+qa.q50.toLocaleString("en-US")+" "+o.u+"）。",
-    "<b>9 成的人</b>："+(qb.q90?.toLocaleString("en-US")??"—")+" "+o.u+"內到達（原本 1 倍要 "+(qa.q90?.toLocaleString("en-US")??"—")+" "+o.u+"）。",
-    ev?o.why:o.why2]
-    .concat(ev?["<b>比較的倍率</b>：倍率設成 1 或 1.3 時，比較 1 倍和 1.3 倍；設成其他倍率時，比較那個倍率和 1 倍。"]:[])
-    .map(x=>"<li>"+x+"</li>").join("");
+  const who2=ev?"活動 1.3 倍":"倍率 "+m2+" 倍", L=["<b>橫軸</b>："+o.x+"。","<b>縱軸</b>：這麼多"+o.u+"內到達目標的機率。",
+    "<b>兩條線</b>：灰線是原本 1 倍，橘線是"+who2+"。活動的效益可以從兩個方向看："];
+  if(n>0) L.push("<b>好處一：機率提高</b>：看你設定的 "+n.toLocaleString("en-US")+" "+o.u+"（藍色直線），橘線比灰線高，到達的機率從 "+pc1(Fa(n))+" 提高到 "+pc1(Fb(n))+"。");
+  if(NA!==null&&NB!==null) L.push("<b>好處二：省下材料</b>：看期望到達目標的機率 "+(WW*100).toFixed(1)+"%（水平虛線），橘線比灰線早碰到這條線；左右相差的 "+(NA-NB).toLocaleString("en-US")+" "+o.u+"（"+NA.toLocaleString("en-US")+" → "+NB.toLocaleString("en-US")+"），就是可以少"+o.verb+"、省下材料的"+o.u+"數。");
+  L.push("<b>兩種好處是同一件事</b>：成功率提高，整條橘線往左上方移動；往上看是機率提高，往左看是次數減少。");
+  if(NA&&NB!==null){ const r=(NA-NB)/NA, base=1-1/m2;
+    if(r>base+0.02) L.push("<b>為什麼省下的比例比倍率還多</b>：成功率變成 "+m2+" 倍，單純換算大約少"+o.verb+" "+(base*100).toFixed(0)+"%（1 − 1 ÷ "+m2+"）；這裡實際少了 "+(r*100).toFixed(0)+"%（"+(NA-NB).toLocaleString("en-US")+" ÷ "+NA.toLocaleString("en-US")+"），因為失敗退級後要重爬的次數也一起變少。"); }
+  L.push("<b>一半的人</b>："+qb.q50.toLocaleString("en-US")+" "+o.u+"內到達（原本 1 倍要 "+qa.q50.toLocaleString("en-US")+" "+o.u+"）。",
+    "<b>9 成的人</b>："+(qb.q90?.toLocaleString("en-US")??"—")+" "+o.u+"內到達（原本 1 倍要 "+(qa.q90?.toLocaleString("en-US")??"—")+" "+o.u+"）。");
+  if(ev) L.push("<b>比較的倍率</b>：倍率設成 1 或 1.3 時，比較 1 倍和 1.3 倍；設成其他倍率時，比較那個倍率和 1 倍。");
+  $("evtNote").innerHTML=L.map(x=>"<li>"+x+"</li>").join("");
 }
 
 // ===== 用材料換算強化次數 =====
@@ -630,7 +746,7 @@ function stopLoss(c,n){
   const ck=[c.part,c.start,c.target,c.evo,c.mult,n].join("|"); if(slCache[ck]) return slCache[ck];
   slCache={};   // 只保留最近一次的結果
   const {states,idx,T}=buildChain(c,c.mult), S=states.length, g=idx[c.target];
-  const s0=idx[c.start] ?? idx[key("gold",EVO_TO)];
+  const s0=idx[c.start] ?? idx[key("gold",evoTo(c.evo))];
   // 只看從起點實際到得了的狀態（例如骨龍 +15 在 +15 進化時，會直接變成金龍 +10，到不了骨龍 +14）
   const reach=new Array(S).fill(false), stack=[s0]; reach[s0]=true;
   while(stack.length){ const i=stack.pop(); for(const [j,p] of T[i]) if(p>0&&!reach[j]){ reach[j]=true; stack.push(j); } }
@@ -920,8 +1036,314 @@ $("mult").addEventListener("input",e=>{
 });
 $("mult").addEventListener("change",()=>{ $("mult").value=cur.mult; multHint(); });
 
+
+// ===== 簡易版：只給建議、三個結果與要準備的材料 =====
+function boneWord(sl,Ts){   // 用到第 Ts 次時，用掉多少每次用量固定的材料（停在起點時，前面一定都是起點那一龍的強化）
+  const eq0=parse(sl.states[sl.s0]).eq, m=eq0==="bone"?"骨龍的骨片":"金龍的寶玉碎片", per=new Set();
+  sl.states.forEach((st,i)=>{ if(i===sl.g) return; const {eq,lv}=parse(st); if(eq===eq0) per.add((EQ[eq].mat[cur.part][m]||[])[lv+1]||0); });
+  if(per.size!==1||![...per][0]) return null;
+  return "消耗約 "+(Ts*[...per][0]).toLocaleString("en-US")+" 個"+m+"時";
+}
+function syncMultBtns(){
+  const preset=cur.mult===1||cur.mult===1.3, C=$("smC");
+  $("sm1").classList.toggle("on",cur.mult===1); $("sm13").classList.toggle("on",cur.mult===1.3); C.classList.toggle("on",!preset);
+  if(!preset&&document.activeElement!==C) C.value=cur.mult; if(preset&&document.activeElement!==C) C.value="";
+}
+function renderSimple(t){
+  const n=cur.n, V=$("sVerdict"), grid=$("sGrid"), lines=$("sLines"), preset=cur.mult===1||cur.mult===1.3;
+  syncMultBtns();
+  $("smHint").textContent=""; $("smHint").className="hint simple-only";
+  const show=n>0; grid.hidden=lines.hidden=$("sMoreH").hidden=!show; $("simpleMats").hidden=!show;
+  if(!show){ V.className="verdict"; V.textContent="請先在上方輸入打算強化幾次（例如手上的果凍夠強化幾次）。"; return; }
+  const hit=t.out[n*t.S+t.g], G=lab(cur.target), sl=stopLoss(cur,n), L=[], B=$("sBenefit");
+  const bar=(cap,a)=>'<div class="sbar"><div class="cap">'+cap+'</div><div class="stack">'+
+    [["up",0],["keep",1],["down",2]].map(([k,c])=>'<div class="seg '+k+'" style="width:'+(a[c]*100)+'%">'+(a[c]>=0.09?pc(a[c]):"")+'</div>').join("")+
+    '</div><div class="nums">衝上目標 '+pc(a[0])+'・沒衝上但沒變差 '+pc(a[1])+'・比原本低 '+pc(a[2])+'</div></div>';
+  B.hidden=true;
+  if(sl.na){
+    V.className="verdict"; V.textContent="這條路線失敗時不會掉到比原本低，不用停手：把 "+n+" 次全部用完就好（到達目標就停）。";
+    $("sBars").innerHTML=bar("把 "+n+" 次全部用完",[hit,1-hit,0]);
+  } else {
+    const S=lab(sl.states[sl.s0]), Ts=Math.max(0,n-(sl.r50??n)), R=sl.R, base=[0,1,2].map(c=>R[n*3+c]), strat=[0,1,2].map(c=>R[Ts*3+c]);
+    if(Ts===0){
+      V.className="verdict warn";
+      V.textContent="目前不建議強化：萬一掉到 "+lab(sl.states[sl.b])+"，要再強化 "+sl.r50+" 次才有一半的機會爬回 "+S+"，可是你只打算強化 "+n+" 次。";
+      $("sBars").innerHTML=bar("如果仍然把 "+n+" 次全部用完",base);
+    } else {
+      const w=boneWord(sl,Ts);
+      V.className="verdict";
+      V.textContent="建議：前 "+Ts+" 次照常強化；用到第 "+Ts+" 次後"+(w?"（"+w+"）":"")+"，只要回到 "+S+" 就停手。"+(w?"":"請自己記下強化的次數。");
+      $("sBars").innerHTML=bar("不停手，把 "+n+" 次全部用完",base)+bar("照建議，第 "+Ts+" 次後回到 "+S+" 就停手",strat);
+      B.hidden=false;
+      B.innerHTML="<b>停手的好處</b>：比原本低的機率從 "+pc(base[2])+" 降到 "+pc(strat[2])+"；代價是衝上目標的機會少 "+pp(base[0]-strat[0])+"（"+pc(base[0])+" → "+pc(strat[0])+"）。";
+    }
+  }
+  L.push(t.q90!==null ? "想要有 9 成把握衝上 "+G+"，大約要準備 "+t.q90.toLocaleString("en-US")+" 次的材料（一直強化到成功為止）。" : "想要有 9 成把握衝上 "+G+"，要準備超過 "+MAXN.toLocaleString("en-US")+" 次的材料。");
+  { const m2=preset?1.3:cur.mult, a=table({...cur,mult:1}), b=table({...cur,mult:m2}), pa=a.out[n*a.S+a.g], pb=b.out[n*b.S+b.g], nm=m2===1.3?"活動（1.3 倍）":"倍率 "+m2+" 倍";
+    if(Math.abs(pa-pb)>5e-4) L.push(cur.mult===1
+      ? "遇到活動（1.3 倍）時，同樣強化 "+n+" 次（不停手），衝上目標的機率會從 "+pc(pa)+" 提高到 "+pc(pb)+"。"
+      : "平常（1 倍）同樣強化 "+n+" 次（不停手），衝上目標的機率只有 "+pc(pa)+"；"+nm+"是 "+pc(pb)+"。"); }
+  lines.innerHTML=L.map(x=>"<li>"+x+"</li>").join("");
+  // 材料：平均（不停手）與最多（每次都以途中最貴的一級計算）
+  $("sMatsTitle").textContent="強化 "+n+" 次要準備的材料（"+(cur.part==="armor"?"防具":"武器")+"）";
+  const MK=MAT_ORDER.length, rows=[];
+  for(const m of MAT_ORDER){
+    let mx=0; for(let i=0;i<t.S;i++){ if(i===t.g||!(t.visits[i]>1e-12)) continue; const {eq,lv}=parse(t.states[i]); mx=Math.max(mx,(EQ[eq].mat[cur.part][m]||[])[lv+1]||0); }
+    const most=mx*n+(t.mats.evo[m]||0), avg=t.cum[n*MK+MAT_ORDER.indexOf(m)];
+    if(most>0) rows.push("<tr><td>"+m+"</td><td>"+fmt(avg)+'</td><td class="sum">'+fmt(most)+"</td></tr>");
+  }
+  $("sMatsT").tHead.innerHTML="<tr><th>材料</th><th>平均會用掉</th><th>最多可能用掉</th></tr>";
+  $("sMatsT").tBodies[0].innerHTML=rows.join("");
+  $("sMatsNote").innerHTML=["<b>平均會用掉</b>：很多人都強化 "+n+" 次時，平均每人用掉的量（到達目標就停）。",
+    "<b>最多可能用掉</b>：每一次都用在途中最貴的那一級"+(t.evolves?"，再加上進化材料":"")+"；準備這麼多就一定夠。",
+    "上表是不停手、把 "+n+" 次全部用完（到達目標就停）的用量。照建議停手的話，有可能提早結束，實際用量只會比上表更少或一樣。"].map(x=>"<li>"+x+"</li>").join("");
+}
+// ===== 版本切換：預設簡易版，記住上次的選擇 =====
+const MODE_KEY="enhance-sim:bone-dragon:mode";
+function setMode(m,save){
+  document.body.classList.toggle("simple",m==="simple");
+  $("modeS").setAttribute("aria-pressed",m==="simple"); $("modeP").setAttribute("aria-pressed",m!=="simple");
+  $("modeHint").textContent=m==="simple"?"只顯示建議與要準備的材料。想看機率分布、止損比較和原因，請切換到專業版。":"顯示全部的機率分布、止損比較與材料表。";
+  if(save){ try{ localStorage.setItem(MODE_KEY,m); }catch(e){} }
+  if(save) render();
+}
+function initMode(){
+  let m=null; try{ m=new URLSearchParams(location.search).get("mode"); }catch(e){}
+  if(m!=="simple"&&m!=="pro"){ try{ m=localStorage.getItem(MODE_KEY); }catch(e){ m=null; } }
+  setMode(m==="pro"?"pro":"simple",false);
+}
+$("modeS").onclick=()=>setMode("simple",true); $("modeP").onclick=()=>setMode("pro",true);
+const setMult=m=>{ cur.mult=m; $("mult").value=m; cache={}; slCache={}; renderRules(); multHint(); render(); };
+$("sm1").onclick=()=>setMult(1); $("sm13").onclick=()=>setMult(1.3);
+$("smC").addEventListener("input",e=>{ const v=parseFloat(e.target.value);
+  if(e.target.value.trim()==="") return;
+  if(!(v>=MULT_MIN&&v<=MULT_MAX)){ const h=$("smHint"); h.className="hint bad simple-only"; h.textContent="請輸入 "+MULT_MIN+"～"+MULT_MAX+" 之間的數字，目前仍以 ×"+cur.mult+" 計算"; return; }
+  const m=Math.round(v*10000)/10000; if(m!==cur.mult) setMult(m); else $("smHint").textContent=""; });
+$("smC").addEventListener("change",e=>{ if(e.target.value.trim()!==""&&!(+e.target.value>=MULT_MIN&&+e.target.value<=MULT_MAX)) e.target.value=(cur.mult===1||cur.mult===1.3)?"":cur.mult; $("smHint").textContent=""; });
+
+// ===== 多件裝備一起強化（依序強化的精確計算） =====
+const Multi=(()=>{
+const PARTS={weapon:{names:["主武器","副武器"],bone:20,gold:5},armor:{names:["頭盔","上衣","下衣","手套","鞋子"],bone:10,gold:5}};
+const EVO_DROP_M=5;
+const mk=(k,s,t)=>Array.from({length:k},()=>({s,t,e:15}));
+const plans={weapon:mk(2,"bone-13","gold-10"),armor:mk(5,"bone-13","gold-10")};
+const nPart={weapon:200,armor:500};
+const rank=s=>{const {eq,lv}=parse(s);return (eq==="gold"?100:0)+lv;};
+// ===== 單件裝備的馬可夫鏈 =====
+function chain(p,m){
+  const start=p.s, target=p.t, S=parse(start), T=parse(target);
+  if(start===target) return {none:true};
+  const evo=Math.max(EVO_MIN,S.lv,p.e), toGold=S.eq==="bone"&&T.eq==="gold";
+  let s0=start; if(toGold&&S.lv>=evo) s0=key("gold",evo-EVO_DROP_M);
+  const states=[s0], idx={[s0]:0}, Tr=[];
+  const add=s=>{ if(!(s in idx)){ idx[s]=states.length; states.push(s);} return idx[s]; };
+  for(let q=0;q<states.length;q++){
+    const s=states[q]; if(s===target){ Tr[q]=[[q,1]]; continue; }
+    const {eq,lv}=parse(s), pr=rate(eq,lv+1,m), f=1-pr;
+    let up=key(eq,lv+1); if(toGold&&eq==="bone"&&lv+1===evo) up=key("gold",evo-EVO_DROP_M);
+    const out=[[add(up),pr]];
+    if(EQ[eq].drop.has(lv+1)){ out.push([add(key(eq,lv-1)),f/2]); out.push([q,f/2]); } else out.push([q,f]);
+    Tr[q]=out.filter(([,x])=>x>0);
+  }
+  const g=idx[target], R0=rank(s0);
+  const risky=states.map((s,i)=>i!==g&&EQ[parse(s).eq].drop.has(parse(s).lv+1));
+  const r50=states.map((s,i)=>{ if(!risky[i]) return 0; const {eq,lv}=parse(s), x=rate(eq,lv,m); return x>=1?1:Math.ceil(Math.log(.5)/Math.log(1-x)); });
+  const below=states.map(s=>rank(s)<R0);
+  return {states,T:Tr,s0:0,g,risky,r50,below,none:false};
+}
+// 收手：停在起點以上、會退的等級，而且剩下的次數 ≤ K（K = null 時用各等級的 r50；K = 0 表示不收手）
+const blocked=(c,i,r,K)=>c.risky[i]&&!c.below[i]&&r<=(K===null?c.r50[i]:K);
+// 平均需要的強化次數（不收手）
+function expected(c){
+  const n=c.states.length, A=[],b=[];
+  for(let i=0;i<n;i++){ const row=new Array(n).fill(0); row[i]=1; if(i!==c.g){ for(const [j,p] of c.T[i]) row[j]-=p; b.push(1);} else b.push(0); A.push(row); }
+  for(let col=0;col<n;col++){ let p=col; for(let r=col+1;r<n;r++) if(Math.abs(A[r][col])>Math.abs(A[p][col])) p=r;
+    [A[col],A[p]]=[A[p],A[col]]; [b[col],b[p]]=[b[p],b[col]];
+    for(let r=0;r<n;r++) if(r!==col){ const f=A[r][col]/A[col][col]; if(f){ for(let k=col;k<n;k++) A[r][k]-=f*A[col][k]; b[r]-=f*b[col]; } } }
+  return b[c.s0]/A[c.s0][c.s0];
+}
+
+// ===== 依序強化的精確計算 =====
+// 狀態：正在強化第 p 件（依順序）、它目前的等級、前面 p 件哪些已達成（位元遮罩）。
+// 第 p 件到達目標或需要收手時，立刻換第 p+1 件（不花次數）；收手的裝備之後不會再強化。
+function seq(C,order,N,K){
+  const P=order.length, cur=order.map((o,p)=>new Float64Array(C[o].states.length<<p)), fin=new Float64Array(1<<P);
+  let below=0; cur[0][C[order[0]].s0]=1;
+  const resolve=r=>{ for(let p=0;p<P;p++){ const c=C[order[p]], S=c.states.length, a=cur[p];
+      for(let m=0;m<(1<<p);m++) for(let i=0;i<S;i++){ const x=a[m*S+i]; if(!x) continue;
+        const done=i===c.g; if(!done&&!blocked(c,i,r,K)) continue;
+        a[m*S+i]=0; const m2=done?m|(1<<p):m;
+        if(p+1===P) fin[m2]+=x; else { const c2=C[order[p+1]]; cur[p+1][m2*c2.states.length+c2.s0]+=x; } } } };
+  for(let t=0;t<N;t++){
+    resolve(N-t);
+    for(let p=0;p<P;p++){ const c=C[order[p]], S=c.states.length, a=cur[p], w=new Float64Array(a.length);
+      for(let m=0;m<(1<<p);m++) for(let i=0;i<S;i++){ const x=a[m*S+i]; if(!x) continue; for(const [j,q] of c.T[i]) w[m*S+j]+=x*q; }
+      cur[p]=w; }
+  }
+  // 次數用完：正在強化的那件停在目前等級
+  for(let p=0;p<P;p++){ const c=C[order[p]], S=c.states.length, a=cur[p];
+    for(let m=0;m<(1<<p);m++) for(let i=0;i<S;i++){ const x=a[m*S+i]; if(!x) continue; const m2=i===c.g?m|(1<<p):m; fin[m2]+=x; if(c.below[i]) below+=x; } }
+  const per=new Array(C.length).fill(0), cnt=new Array(P+1).fill(0);
+  for(let m=0;m<(1<<P);m++){ const x=fin[m]; if(!x) continue; let k=0; for(let p=0;p<P;p++) if(m>>p&1){ per[order[p]]+=x; k++; } cnt[k]+=x; }
+  return {all:fin[(1<<P)-1], one:1-fin[0], below, per, cnt, avg:cnt.reduce((s,x,k)=>s+x*k,0)};
+}
+// 各自分配：每件分開算，再組合（彼此獨立）
+function single(c,N,K){
+  let v=new Float64Array(c.states.length); v[c.s0]=1;
+  for(let t=0;t<N;t++){ const r=N-t, w=new Float64Array(v.length);
+    for(let i=0;i<v.length;i++){ const x=v[i]; if(!x) continue;
+      if(i===c.g||blocked(c,i,r,K)){ w[i]+=x; continue; }
+      for(const [j,p] of c.T[i]) w[j]+=x*p; }
+    v=w; }
+  return {done:v[c.g], below:v.reduce((s,x,i)=>s+(c.below[i]?x:0),0)};
+}
+function splitRes(C,ns,K){
+  const r=C.map((c,k)=>single(c,ns[k],K)); let cnt=[1];
+  for(const x of r){ const nx=new Array(cnt.length+1).fill(0); cnt.forEach((p,k)=>{ nx[k]+=p*(1-x.done); nx[k+1]+=p*x.done; }); cnt=nx; }
+  return {all:r.reduce((s,x)=>s*x.done,1), one:1-r.reduce((s,x)=>s*(1-x.done),1), below:1-r.reduce((s,x)=>s*(1-x.below),1), per:r.map(x=>x.done), cnt, avg:r.reduce((s,x)=>s+x.done,0)};
+}
+const perms=a=>a.length<=1?[a]:a.flatMap((x,i)=>perms([...a.slice(0,i),...a.slice(i+1)]).map(p=>[x,...p]));
+const better=(x,y)=> x.avg>y.avg+1e-9 || (Math.abs(x.avg-y.avg)<=1e-9 && (x.one>y.one+1e-9 || (Math.abs(x.one-y.one)<=1e-9 && x.all>y.all+1e-9)));
+
+const pct=x=> x>=0.9995&&x<1 ? "> 99.9%" : x<0.0005&&x>0 ? "不到 0.1%" : (x*100).toFixed(1)+"%";
+function fillSelect(sel,groups,val){ sel.innerHTML="";
+  for(const [glab,opts] of groups){ if(!opts.length) continue; const og=document.createElement("optgroup"); og.label=glab;
+    for(const [v,t] of opts){ og.appendChild(new Option(t,v)); } sel.appendChild(og);} sel.value=val; }
+const allowed=(t,s)=>{ if(t===s) return true; const S=parse(s),T=parse(t); if(S.eq==="bone") return T.eq==="bone"?T.lv>S.lv:T.lv>=Math.max(EVO_MIN,S.lv)-EVO_DROP_M; return T.eq==="gold"&&T.lv>S.lv; };
+function buildItems(){
+  const box=$("mItems"); box.innerHTML="";
+  PARTS[cur.part].names.forEach((nm,k)=>{ const d=document.createElement("div"); d.className="mit";
+    d.innerHTML='<span class="nm">'+nm+'</span><span class="mplan"><select id="ms'+k+'" aria-label="'+nm+'起點"></select><span class="arrow">→</span><select id="mt'+k+'" aria-label="'+nm+'目標"></select>'+
+      '<span class="mevw" id="mew'+k+'"><span class="lab">進化時機</span><select id="me'+k+'" aria-label="'+nm+'進化時機"></select></span></span>';
+    box.appendChild(d);
+    $("ms"+k).addEventListener("change",e=>{ plans[cur.part][k].s=e.target.value; refreshSelects(); render(); });
+    $("mt"+k).addEventListener("change",e=>{ plans[cur.part][k].t=e.target.value; refreshSelects(); render(); });
+    $("me"+k).addEventListener("change",e=>{ plans[cur.part][k].e=+e.target.value; refreshSelects(); render(); });
+  });
+  refreshSelects();
+}
+function refreshSelects(){
+  plans[cur.part].forEach((p,k)=>{
+    fillSelect($("ms"+k),[["骨龍",Array.from({length:TOP},(_,i)=>[key("bone",i),"骨龍 +"+i])],["金龍",Array.from({length:TOP},(_,i)=>[key("gold",i),"金龍 +"+i])]],p.s);
+    if(!allowed(p.t,p.s)) p.t=p.s;
+    const opt=eq=>Array.from({length:TOP+1},(_,i)=>key(eq,i)).filter(v=>allowed(v,p.s)).map(v=>[v,v===p.s?"不強化":lab(v)]);
+    fillSelect($("mt"+k),[["骨龍",opt("bone")],["金龍",opt("gold")]],p.t);
+    const S=parse(p.s), Tg=parse(p.t), need=S.eq==="bone"&&Tg.eq==="gold"&&p.s!==p.t;
+    $("mew"+k).hidden=!need;
+    const lo=Math.max(EVO_MIN,S.lv), hi=need?Math.min(TOP,Tg.lv+EVO_DROP_M):TOP; p.e=Math.min(hi,Math.max(lo,p.e));
+    fillSelect($("me"+k),[["骨龍",Array.from({length:TOP-EVO_MIN+1},(_,i)=>EVO_MIN+i).filter(e=>e>=lo&&e<=hi).map(e=>[String(e),"骨龍 +"+e+"（→ 金龍 +"+(e-EVO_DROP_M)+"）"])]],String(p.e));
+  });
+}
+
+let timer=null; function render(){ clearTimeout(timer); timer=setTimeout(compute,30); }
+function compute(){
+  const part=cur.part, mult=cur.mult, simple=document.body.classList.contains("simple");
+  const N=nPart[part], mode=simple?"r50":$("mSlMode").value, names=PARTS[part].names, all=plans[part];
+  $("mSlRiskWrap").hidden=mode!=="risk"; $("mSlTWrap").hidden=mode!=="custom";
+  $("mNShow").textContent=N.toLocaleString("en-US");
+  const W=part==="weapon"?"把":"件", Wn=part==="weapon"?"武器":"裝備";
+  $("mMatHint").textContent="材料參考："+(part==="weapon"?"武器":"防具")+"的骨龍強化（+10 以上）每次 "+PARTS[part].bone+" 個骨龍的骨片，金龍強化（+6 以上）每次 "+PARTS[part].gold+" 個金龍的寶玉碎片。";
+  const idxs=all.map((p,k)=>k).filter(k=>all[k].s!==all[k].t), C=idxs.map(k=>chain(all[k],mult)), P=C.length, nm=i=>names[idxs[i]];
+  if(!P){ $("mVerdict").textContent="每"+W+"都設定為「不強化」，請先選一"+W+"的目標。"; ["mStats","mPerT","mWhy","mCmpT","mCntT","mDetail"].forEach(i=>$(i).innerHTML=""); $("mCmp1").textContent=""; return; }
+  // 順序：平均需要次數少的先做；3 件以下比較所有順序，更多件時比較幾種代表性的順序
+  const E=C.map(expected), listed=[...Array(P).keys()], short=[...listed].sort((a,b)=>E[a]-E[b]), long=[...short].reverse();
+  const cands=P<=3?[short,...perms(listed)]:[short,listed,long];
+  const pick=K=>{ let best=null,bo=null; for(const o of cands){ const r=seq(C,o,N,K); if(!best||better(r,best)){ best=r; bo=o; } } return {R:best,ord:bo}; };
+  let K=null, Ts=null;
+  if(mode==="none") K=0;
+  else if(mode==="custom"){ Ts=Math.max(0,Math.min(N,Math.round(+$("mSlT").value||0))); K=N-Ts; }
+  else if(mode==="risk"){   // 倒退機率不超過 x 的前提下，最晚第幾次後收手（二分搜尋）
+    const x=Math.max(0,Math.min(100,+$("mSlRisk").value||0))/100, o0=pick(null).ord;
+    let lo=0, hi=N; if(seq(C,o0,N,0).below<=x+1e-12) lo=N; else { while(lo<hi){ const mid=Math.ceil((lo+hi)/2); if(seq(C,o0,N,N-mid).below<=x+1e-12) lo=mid; else hi=mid-1; } }
+    Ts=lo; K=N-Ts; }
+  const {R,ord}=pick(K), NS=seq(C,ord,N,0);
+  // 各自分配：依平均需要次數的比例
+  const sumE=E.reduce((a,b)=>a+b,0), raw=E.map(e=>N*e/sumE), ns=raw.map(Math.floor); let left=N-ns.reduce((a,b)=>a+b,0);
+  raw.map((x,k)=>[x-Math.floor(x),k]).sort((a,b)=>b[0]-a[0]).slice(0,left).forEach(([,k])=>ns[k]++);
+  const Sp=splitRes(C,ns,K);
+  // 會退的等級（起點以上）
+  const riskyLv=new Map(); C.forEach(c=>c.states.forEach((s,i)=>{ if(c.risky[i]&&!c.below[i]) riskyLv.set(lab(s),c.r50[i]); }));
+  const rs=[...new Set(riskyLv.values())], rTxt=rs.length===1?rs[0]+" 次":Math.min(...rs)+"～"+Math.max(...rs)+" 次", lvTxt=[...riskyLv.keys()].join("、");
+  const useStop=K!==0&&riskyLv.size>0;
+  const stopLab= K===0 ? "，不收手" : K===null ? "，最後收手" : "，第 "+Ts+" 次後收手";
+  const ordTxt=ord.map(nm).join(" → ");
+  // 建議
+  let v = P===1 ? "只有"+nm(0)+"要強化：全部次數都用在"+nm(0)+"，目標"+lab(all[idxs[0]].t)+"。"
+        : P===2 ? "先把"+nm(ord[0])+"強化到"+lab(all[idxs[ord[0]]].t)+"，剩下的次數全部給"+nm(ord[1])+"。"
+        : "依「"+ordTxt+"」的順序一"+W+"一"+W+"強化：每"+W+"到達目標後，剩下的次數全部給下一"+W+"。";
+  const when = K===null ? (rs.length===1 ? "第 "+Math.max(0,N-rs[0])+" 次以後（剩最後 "+rs[0]+" 次）" : "最後 "+rTxt+"時") : "第 "+Ts+" 次以後";
+  if(useStop&&K!==null&&Ts===0) v+="設定成第 0 次後收手：停在"+lvTxt+" 的"+Wn+"一開始就不強化。";
+  else if(useStop) v+= P===1 ? when+"，停在"+lvTxt+" 就收手。" : when+"，手上這"+W+"停在"+lvTxt+(P===2?" 就換另一"+W+"；兩"+W+"都停在這些等級就收手。":" 就換下一"+W+"；剩下的都停在這些等級就收手。");
+  $("mVerdict").textContent=v;
+  // 數字
+  const st=[["全部達成",P<2?"—":pct(R.all)],["至少一"+W+"達成",pct(R.one)]];
+  if(P>=3) st.push(["平均達成件數",(Math.round(R.avg*100)/100).toFixed(2)+" / "+P]);
+  st.push(["有"+Wn+"退到比起點低",pct(R.below)]);
+  $("mStats").innerHTML=st.map(([k,x])=>'<div class="stat"><div class="k">'+k+'</div><div class="v">'+x+'</div></div>').join("");
+  $("mPerT").innerHTML="<thead><tr><th>強化順序</th><th>"+Wn+"</th><th>計畫</th><th>達成</th></tr></thead><tbody>"+
+    ord.map((i,r)=>'<tr><td class="t">'+(r+1)+'</td><td class="t">'+nm(i)+'</td><td class="t">'+lab(all[idxs[i]].s)+" → "+lab(all[idxs[i]].t)+"</td><td>"+pct(R.per[i])+"</td></tr>").join("")+"</tbody>";
+  // 為什麼
+  const why=[];
+  if(P>=2){
+    why.push("<b>次數放在一起用。</b>運氣好的那"+W+"省下來的次數，可以直接給下一"+W+"；一開始就各自分好，省下來的次數就浪費了。");
+    why.push("<b>一次完成一"+W+"。</b>全部達成的機率，先做哪一"+W+"幾乎一樣；但沒能全部達成時，一"+W+"一"+W+"完成比較常留下已經達成的"+Wn+"，而不是每"+W+"都卡在半路。");
+    const same=Math.max(...E)-Math.min(...E)<1e-6;
+    why.push(same ? "<b>順序不影響結果。</b>每"+W+"的計畫需要的次數都一樣，照列表順序即可。"
+                  : "<b>需要次數少的先做。</b>"+(P<=3?"比較所有順序後，":"比較幾種順序後，")+"這個順序達成的"+W+"數最多（平均 "+(Math.round(R.avg*100)/100).toFixed(2)+" "+W+"）。");
+  }
+  if(useStop) why.push("<b>最後幾次在會退的等級收手。</b>"+lvTxt+" 強化失敗可能退一級；次數快用完時不再冒險，"+(NS.below-R.below<0.0005&&NS.below<0.0005?"不過這次的次數很充足，收不收手，退到比起點低的機率都不到 0.1%。":"退到比起點低的機率從 "+pct(NS.below)+" 降到 "+pct(R.below)+"。"));
+  else if(K!==0) why.push("<b>這次的路線沒有會退的等級，</b>所以不需要收手，次數全部用完即可。");
+  $("mWhy").innerHTML=why.map(x=>"<li>"+x+"</li>").join("");
+  $("mCmp1").innerHTML=P<2?"":"和「每"+W+"各自分配次數」（"+idxs.map((k,i)=>nm(i)+" "+ns[i]+" 次").join("、")+"）比較：全部達成的機率從 "+pct(Sp.all)+" 變成 <b>"+pct(R.all)+"</b>。";
+  // 比較表
+  const rows=[["建議：依「"+ordTxt+"」"+stopLab,R,true]];
+  if(P>=2){ const seen=new Set([ord.join()]); if(Math.max(...E)-Math.min(...E)<1e-6){ seen.add(listed.join()); seen.add(long.join()); }
+    for(const [t,o] of [["照列表順序",listed],["需要次數多的先做",long]]) if(!seen.has(o.join())){ seen.add(o.join()); rows.push([t+"（"+o.map(nm).join(" → ")+"）"+stopLab,seq(C,o,N,K),false]); }
+    rows.push(["各自分配次數"+stopLab,Sp,false]); }
+  if(useStop) rows.push(["建議的順序，不收手",NS,false]);
+  $("mCmpT").innerHTML="<thead><tr><th>做法</th><th>全部達成</th><th>至少一"+W+"達成</th><th>平均達成件數</th><th>有"+Wn+"退到比起點低</th></tr></thead><tbody>"+
+    rows.map(([t,x,b])=>"<tr"+(b?" class=best":"")+'><td class="t">'+t+"</td><td>"+(P<2?"—":pct(x.all))+"</td><td>"+pct(x.one)+"</td><td>"+x.avg.toFixed(2)+"</td><td>"+pct(x.below)+"</td></tr>").join("")+"</tbody>";
+  $("mCmpNote").textContent="各自分配的次數，依每"+W+"平均需要的強化次數（不收手時："+idxs.map((k,i)=>nm(i)+" "+Math.round(E[i])+" 次").join("、")+"）按比例分。";
+  $("mCntT").innerHTML="<thead><tr><th>達成件數</th><th>機率</th></tr></thead><tbody>"+R.cnt.map((x,k)=>[k,x]).reverse().map(([k,x])=>'<tr><td class="t">'+k+" "+W+(k===P?"（全部）":"")+"</td><td>"+pct(x)+"</td></tr>").join("")+"</tbody>";
+  $("mDetail").innerHTML=
+    "<ul><li><b>N</b>：合計的強化次數（目前 "+N+"）；<b>r</b>：還剩下的次數。</li>"+
+    "<li><b>會退的等級</b>：從這個等級強化失敗時，可能退一級。這次的路線中，起點以上的會退等級："+(lvTxt||"沒有")+"。</li>"+
+    "<li><b>r₅₀</b>：從會退的等級退了一級後，要在 r₅₀ 次內爬回原等級，機率才第一次超過 50%。目前倍率下為 "+(rs.length?rTxt:"—")+"。</li>"+
+    "<li><b>規則</b>：依「"+ordTxt+"」的順序，每次強化前選第一"+W+"「還沒達到目標，而且不是停在起點以上的會退等級、同時 r ≤ "+(K===null?"r₅₀":"K")+"」的"+Wn+"；都不符合就停手。"+(K===null?"":"這裡 K = N − T = "+K+"（"+(K===0?"K = 0 表示不收手":"T 是收手的次數，第 T 次以後收手")+"）。")+"因為收手的"+Wn+"之後不會再強化，實際上就是一"+W+"一"+W+"依序完成。</li>"+
+    (mode==="risk"?"<li><b>指定可接受的倒退機率</b>：在「有"+Wn+"退到比起點低」不超過設定值的前提下，找出最晚的收手次數 T。</li>":"")+
+    "<li><b>順序怎麼決定</b>："+(P<=3?"所有順序都算一次":"比較「需要次數少的先做」「照列表順序」「需要次數多的先做」三種")+"，選平均達成件數最多的；相同時再比「至少一"+W+"達成」和「全部達成」。</li>"+
+    "<li><b>全部達成與順序無關</b>：不收手時，「全部達成」等於「每"+W+"實際需要的次數加起來 ≤ N」，跟先做哪一"+W+"無關；收手只會讓它稍微改變。</li>"+
+    "<li><b>合併不會比分開差</b>：每"+W+"都能在分到的次數內完成時，加起來也不會超過 N；所以（不收手時）合併使用，全部達成的機率至少和事先分好一樣高。</li>"+
+    "<li>頁面上的數字都是精確計算（逐次推進所有可能的結果），不是隨機模擬。</li></ul>";
+}
+
+
+function setN(n,fromBox){ n=Math.max(0,Math.min(5000,Math.round(+n||0))); nPart[cur.part]=n; if(n>+$("mSlider").max) $("mSlider").max=5000; $("mSlider").value=n; if(!fromBox) $("mN").value=n; render(); }
+$("mSlider").addEventListener("input",e=>setN(e.target.value));
+$("mN").addEventListener("input",e=>{ if(!e.isComposing) setN(e.target.value,true); });
+$("mN").addEventListener("compositionend",e=>setN(e.target.value,true));
+$("mN").addEventListener("change",e=>setN(e.target.value));
+["mSlMode","mSlRisk","mSlT"].forEach(id=>$(id).addEventListener("input",render));
+let builtFor=null;
+function show(){ if(builtFor!==cur.part){ builtFor=cur.part; buildItems(); } setN(nPart[cur.part]); }
+function reset(){ $("mSlMode").value="r50"; $("mSlRisk").value="10"; $("mSlT").value="0"; builtFor=null; }
+return {show,reset};
+})();
+// ===== 裝備數量：一件／多件 =====
+const CNT_KEY="enhance-sim:bone-dragon:count";
+function setCount(c,save){
+  document.body.classList.toggle("multi",c==="multi");
+  $("cnt1").setAttribute("aria-pressed",c!=="multi"); $("cntM").setAttribute("aria-pressed",c==="multi");
+  if(save){ try{ localStorage.setItem(CNT_KEY,c); }catch(e){} }
+  render();
+}
+$("cnt1").onclick=()=>setCount("one",true); $("cntM").onclick=()=>setCount("multi",true);
+function initCount(){ let c=null; try{ c=new URLSearchParams(location.search).get("count"); }catch(e){}
+  if(c!=="one"&&c!=="multi"){ try{ c=localStorage.getItem(CNT_KEY); }catch(e){ c=null; } }
+  document.body.classList.toggle("multi",c==="multi"); $("cnt1").setAttribute("aria-pressed",c!=="multi"); $("cntM").setAttribute("aria-pressed",c==="multi"); }
 // 以程式狀態為準，讓所有控制元件同步；避免瀏覽器重新整理或返回時自動回填舊值
 function syncAll(){
+  initMode(); initCount(); Multi.reset();
   $("part").value=cur.part; $("start").value=cur.start; refreshTargets();
   $("mult").value=cur.mult; renderRules(); multHint();
   $("slMode").value="r50"; $("slRisk").value="10"; $("slT").value="0";
