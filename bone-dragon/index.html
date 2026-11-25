@@ -189,7 +189,7 @@ header .fold.rules{margin-top:10px}
     </div>
     <div class="conv">
       <span class="lab">用材料換算強化次數</span>
-      <span class="pair" id="convBW"><label for="convB">古代龍的骨頭碎片</label><input type="number" id="convB" autocomplete="off" min="0" step="1" placeholder="手上的數量"></span>
+      <span class="pair" id="convBW"><label for="convB">骨龍的骨片</label><input type="number" id="convB" autocomplete="off" min="0" step="1" placeholder="手上的數量"></span>
       <span class="pair" id="convGW"><label for="convG">金龍的寶玉碎片</label><input type="number" id="convG" autocomplete="off" min="0" step="1" placeholder="手上的數量"></span>
       <span class="convOut" id="convOut"></span>
       <button id="convApply" hidden>套用到強化次數</button>
@@ -288,18 +288,18 @@ const EQ={
     // 調整後成功率
     rate:Z.concat([1,1,1,1,1,.65,.55,.45,.30,.15,.07,.06,.05,.05,.05,.05,.05,.05,.05,.05]),
     drop:new Set([12,14,16,18,20]),
-    // +1～+15 的金幣、果凍為調整後數值；骨頭碎片、石榴石、淨水與 +16～+20 取自古代龍表格
+    // +1～+15 的金幣、果凍為調整後數值；骨龍的骨片、石榴石、淨水與 +16～+20 取自古代龍表格
     mat:{
       armor:{
         "金幣":Z.concat([240,960,2160,3840,6040,8680,11800,15440,19520,24120,29200,34720,40760,47280,54280,154400,174300,195400,200000,200000]),
         "果凍":Z.concat([0,0,0,0,0,800,1150,1500,1900,2250,2300,2450,2600,2800,3000,17200,19400,21700,24200,26800]),
-        "古代龍的骨頭碎片":Z.concat([5,5,5,5,5,5,5,5,5,10,10,10,10,10,10,10,10,10,10,10]),
+        "骨龍的骨片":Z.concat([5,5,5,5,5,5,5,5,5,10,10,10,10,10,10,10,10,10,10,10]),
         "高級石榴石":Z.concat([10,30,70,120,190,270,370,480,610,750,910,1080,1270,1470,1690,1920,2170,2430,2710,3000]),
         "高級生命淨水":Z.concat([10,30,70,130,210,300,400,530,670,830,1000,1190,1390,1620,1860,2110,2380,2670,2980,3300])},
       weapon:{
         "金幣":Z.concat([360,1360,3080,5480,8560,12320,16760,21880,27680,34160,41360,49200,57760,66960,76880,200000,200000,200000,200000,200000]),
         "果凍":Z.concat([0,0,0,0,0,850,1450,2200,3100,4100,4300,4600,4900,5200,5500,50200,60200,71400,84000,98000]),
-        "古代龍的骨頭碎片":Z.concat([10,10,10,10,10,10,10,10,10,20,20,20,20,20,20,20,20,20,20,20]),
+        "骨龍的骨片":Z.concat([10,10,10,10,10,10,10,10,10,20,20,20,20,20,20,20,20,20,20,20]),
         "高級石榴石":Z.concat([10,40,90,160,250,360,490,640,810,1000,1210,1440,1690,1960,2250,2560,2890,3240,3610,4000]),
         "高級生命淨水":Z.concat([10,30,70,130,210,300,400,530,670,830,1000,1190,1390,1620,1860,2110,2380,2670,2980,3300])}}},
   gold:{ name:"金龍",
@@ -319,7 +319,7 @@ const EQ={
         "金龍的逆鱗粉末":Z.concat([5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0]),
         "金龍的寶玉碎片":Z.concat([0,0,0,0,0,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5])}}}};
 const EVOLVE={"金龍的鱗片粉末":10,"金龍的逆鱗粉末":10,"金龍的寶玉碎片":10,"金幣":100000};
-const MAT_ORDER=["金幣","果凍","古代龍的骨頭碎片","高級石榴石","高級生命淨水","金龍的鱗片粉末","金龍的逆鱗粉末","金龍的寶玉碎片"];
+const MAT_ORDER=["金幣","果凍","骨龍的骨片","高級石榴石","高級生命淨水","金龍的鱗片粉末","金龍的逆鱗粉末","金龍的寶玉碎片"];
 const TOP=20, MAXN=20000, MULT_MIN=1, MULT_MAX=10, EVO_MIN=15, EVO_TO=10;
 const $=id=>document.getElementById(id);
 const rate=(eq,k,m)=> EQ[eq].rate[k]>=1 ? 1 : Math.min(1,EQ[eq].rate[k]*m);
@@ -578,9 +578,9 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
 }
 
 // ===== 用材料換算強化次數 =====
-// 骨龍看古代龍的骨頭碎片、金龍看金龍的寶玉碎片：+10 以上（金龍 +6 以上）每次用量固定，可以直接除；
+// 骨龍看骨龍的骨片、金龍看金龍的寶玉碎片：+10 以上（金龍 +6 以上）每次用量固定，可以直接除；
 // 低強化階段每次用量較少，這一段以平均強化次數估算。
-const FIXM={bone:"古代龍的骨頭碎片",gold:"金龍的寶玉碎片"};
+const FIXM={bone:"骨龍的骨片",gold:"金龍的寶玉碎片"};
 function convSeg(t,eq){
   let cmax=0; const st=[];
   t.states.forEach((s,i)=>{ if(i===t.g||!(t.visits[i]>1e-12)) return; const {eq:e,lv}=parse(s); if(e!==eq) return;
@@ -615,7 +615,7 @@ function renderConv(t){
     if(!parts.length) return;
     let txt=parts.join("；")+"。";
     if(nb!==null&&ng!==null){ total=nb+ng;
-      txt+= (+rg||0)<ev ? "所以最多只能強化到進化前，合計 <b>"+f(total)+"</b> 次。" : "合計最多 <b>"+f(total)+"</b> 次；如果進化時骨頭碎片還有剩，剩下的不能用在金龍強化。"; }
+      txt+= (+rg||0)<ev ? "所以最多只能強化到進化前，合計 <b>"+f(total)+"</b> 次。" : "合計最多 <b>"+f(total)+"</b> 次；如果進化時骨龍的骨片還有剩，剩下的不能用在金龍強化。"; }
     out.innerHTML=txt;
   }
   if(total!==null){ btn.hidden=false; btn.textContent="套用到強化次數（"+f(total)+" 次）"; btn.dataset.n=total; }
@@ -690,9 +690,9 @@ function resultsAt(sl,r,stop){
   for(let k=1;k<=r;k++){ prev=G; G=stepG(G,T,S,g,s0,stop); }
   return {G,prev};
 }
-// 怎麼確認已經到第 Ts 次：骨龍看「古代龍的骨頭碎片」、金龍看「金龍的寶玉碎片」，這兩種材料每次用量固定
+// 怎麼確認已經到第 Ts 次：骨龍看「骨龍的骨片」、金龍看「金龍的寶玉碎片」，這兩種材料每次用量固定
 function countHint(sl,Ts){
-  const BONE="古代龍的骨頭碎片", GOLD="金龍的寶玉碎片", per={bone:new Set(),gold:new Set()};
+  const BONE="骨龍的骨片", GOLD="金龍的寶玉碎片", per={bone:new Set(),gold:new Set()};
   sl.states.forEach((st,i)=>{ if(i===sl.g) return; const {eq,lv}=parse(st);
     const m=eq==="bone"?BONE:GOLD, arr=EQ[eq].mat[cur.part][m]; per[eq].add(arr?arr[lv+1]:0); });
   if(per.bone.size>1||per.gold.size>1||[...per.bone,...per.gold].some(x=>!x)) return "請自己記下強化的次數。";
