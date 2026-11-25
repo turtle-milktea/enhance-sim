@@ -684,9 +684,12 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
     "<b>兩條線</b>：灰線是原本 1 倍，橘線是"+who2+"。活動的效益可以從兩個方向看："];
   if(n>0) L.push("<b>好處一：機率提高</b>：看你設定的 "+n.toLocaleString("en-US")+" "+o.u+"（藍色直線），橘線比灰線高，到達的機率從 "+pc1(Fa(n))+" 提高到 "+pc1(Fb(n))+"。");
   if(NA!==null&&NB!==null) L.push("<b>好處二：省下材料</b>：看期望到達目標的機率 "+(WW*100).toFixed(1)+"%（水平虛線），橘線比灰線早碰到這條線；左右相差的 "+(NA-NB).toLocaleString("en-US")+" "+o.u+"（"+NA.toLocaleString("en-US")+" → "+NB.toLocaleString("en-US")+"），就是可以少"+o.verb+"、省下材料的"+o.u+"數。");
-  L.push("<b>兩種好處是同一件事</b>：成功率提高，整條橘線往左上方移動；往上看是機率提高，往左看是次數減少。");
-  if(NA&&NB!==null){ const r=(NA-NB)/NA, base=1-1/m2;
-    if(r>base+0.02) L.push("<b>為什麼省下的比例比倍率還多</b>：成功率變成 "+m2+" 倍，單純換算大約少"+o.verb+" "+(base*100).toFixed(0)+"%（1 − 1 ÷ "+m2+"）；這裡實際少了 "+(r*100).toFixed(0)+"%（"+(NA-NB).toLocaleString("en-US")+" ÷ "+NA.toLocaleString("en-US")+"），因為失敗退級後要重爬的次數也一起變少。"); }
+  L.push("<b>兩種好處是同一件事</b>：成功率提高，整條橘線往左上方移動；往上看是機率提高，往左看是"+o.u+"數減少。");
+  if(NA&&NB!==null){ const r=(NA-NB)/NA, base=1-1/m2, pr=x=>(x*100).toFixed(0)+"%";
+    const calc="成功率變成 "+m2+" 倍，單純換算大約少"+o.verb+" "+pr(base)+"（1 − 1 ÷ "+m2+"）；這裡實際少了 "+pr(r)+"（"+(NA-NB).toLocaleString("en-US")+" ÷ "+NA.toLocaleString("en-US")+"）";
+    if(r>base+0.02) L.push("<b>為什麼省下的比例比倍率還多</b>："+calc+"，"+(o.more||"因為失敗退級後要重爬的次數也一起變少。"));
+    else if(r<base-0.02) L.push("<b>為什麼省下的比例比倍率還少</b>："+calc+"，"+(o.less||"因為有一部分的次數不受成功率影響。"));
+    else L.push("<b>省下的比例怎麼來</b>："+calc+"。"); }
   L.push("<b>一半的人</b>："+qb.q50.toLocaleString("en-US")+" "+o.u+"內到達（原本 1 倍要 "+qa.q50.toLocaleString("en-US")+" "+o.u+"）。",
     "<b>9 成的人</b>："+(qb.q90?.toLocaleString("en-US")??"—")+" "+o.u+"內到達（原本 1 倍要 "+(qa.q90?.toLocaleString("en-US")??"—")+" "+o.u+"）。");
   if(ev) L.push("<b>比較的倍率</b>：倍率設成 1 或 1.3 時，比較 1 倍和 1.3 倍；設成其他倍率時，比較那個倍率和 1 倍。");

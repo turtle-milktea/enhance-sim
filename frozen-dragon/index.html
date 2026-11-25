@@ -194,7 +194,7 @@ td.dropcell{color:var(--bad);font-weight:500}
     <ul class="note distlist" id="probNote"></ul>
     <details class="fold" id="evtWrap">
       <summary id="evtSum">活動 1.3 倍時差多少</summary>
-      <div class="evtNeedRow"><span class="pair"><label for="evtP">想要的機率</label><input type="number" id="evtP" autocomplete="off" min="0.1" max="99.9" step="0.1" value=""><span class="lab">%</span></span></div>
+      <div class="evtNeedRow"><span class="pair"><label for="evtP">期望到達目標的機率</label><input type="number" id="evtP" autocomplete="off" min="0.1" max="99.9" step="0.1" value=""><span class="lab">%</span></span></div>
       <p class="evtNeed" id="evtNeed"></p>
       <div id="evtChart" class="distchart"></div>
       <div class="legend"><span><i class="sw" style="background:var(--muted)"></i>原本（1 倍）</span><span><i class="sw" style="background:var(--goal)"></i><span id="evtLegB">活動（1.3 倍）</span></span></div>
@@ -382,10 +382,12 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
   if(n>0&&n<=K) gs+='<line x1="'+X(n)+'" x2="'+X(n)+'" y1="'+Tp+'" y2="'+(H-Bm)+'" stroke="var(--bar)" stroke-width="2"/><text class="lb" x="'+(X(n)+4)+'" y="'+(Tp+12)+'" fill="var(--bar)">你：n = '+n.toLocaleString("en-US")+'</text>';
   // 想要的機率：兩條曲線各自在第幾箱達到這個機率
   // 想要的機率：預設是「活動倍率強化 n 次」的機率（藍線與橘線的交點），跟著 n 走；玩家自己輸入後，設定沒變之前都用輸入的值
+  let NA=null, NB=null, WW=0;
   { const el=$("evtP"), sig=JSON.stringify(cur), manual=el.dataset.sig===sig&&el.value.trim()!=="";
     let w = manual ? Math.max(0.1,Math.min(99.9,+el.value||50))/100 : (n>0 ? Fb(n) : 0.5);
     w=Math.max(0.001,Math.min(0.999,w)); if(!manual){ el.value=String(Math.round(w*1000)/10); el.dataset.sig=""; }
     const need=f=>{ for(let k=0;k<=MAXN;k++) if(f(k)>=w-1e-12) return k; return null; }, na=need(Fa), nb=need(Fb);
+    NA=na; NB=nb; WW=w;
     gs+='<line x1="'+Lf+'" x2="'+(W-Rr)+'" y1="'+Y(w)+'" y2="'+Y(w)+'" stroke="var(--fg)" stroke-dasharray="3 3" opacity=".6"/>';
     for(const [k,col,dy] of [[na,"var(--muted)",14],[nb,"var(--goal)",-6]]) if(k!==null&&k<=K)
       gs+='<line x1="'+X(k)+'" x2="'+X(k)+'" y1="'+Y(w)+'" y2="'+(H-Bm)+'" stroke="'+col+'" stroke-dasharray="2 3"/><circle cx="'+X(k)+'" cy="'+Y(w)+'" r="4" fill="'+col+'"/><text class="lb" x="'+(X(k)+5)+'" y="'+(Y(w)+dy)+'" fill="'+col+'">'+k.toLocaleString("en-US")+' '+o.u+'</text>';
@@ -396,14 +398,20 @@ function drawEvent(Fa,Fb,qa,qb,m2,n,o){
       ? "用你設定的 "+n.toLocaleString("en-US")+" "+o.u+"："+who+"有 "+pw+" 的機會到達；原本 1 倍要"+o.verb+" "+f(na)+"才有同樣的機會"+saveTxt+"。"
       : "想要有 "+pw+" 的機會到達：原本 1 倍要"+o.verb+" "+f(na)+"，"+who+"要"+o.verb+" "+f(nb)+saveTxt+"。"; }
   $("evtChart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="原本與'+nm+'在 n '+o.u+'內到達的機率">'+gs+'</svg>';
-  $("evtNote").innerHTML=["<b>橫軸</b>："+o.x+"。",
-    "<b>縱軸</b>：這麼多"+o.u+"內到達目標的機率。",
-    "<b>兩條線</b>：灰線是原本 1 倍，橘線是"+(ev?"活動 1.3 倍":"倍率 "+m2+" 倍")+"。同一個次數下，兩條線的上下距離，就是"+(ev?"活動":"提高倍率")+"多出來的機會。",
-    "<b>一半的人</b>："+qb.q50.toLocaleString("en-US")+" "+o.u+"內到達（原本 1 倍要 "+qa.q50.toLocaleString("en-US")+" "+o.u+"）。",
-    "<b>9 成的人</b>："+(qb.q90?.toLocaleString("en-US")??"—")+" "+o.u+"內到達（原本 1 倍要 "+(qa.q90?.toLocaleString("en-US")??"—")+" "+o.u+"）。",
-    ev?o.why:o.why2]
-    .concat(ev?["<b>比較的倍率</b>：倍率設成 1 或 1.3 時，比較 1 倍和 1.3 倍；設成其他倍率時，比較那個倍率和 1 倍。"]:[])
-    .map(x=>"<li>"+x+"</li>").join("");
+  const who2=ev?"活動 1.3 倍":"倍率 "+m2+" 倍", L=["<b>橫軸</b>："+o.x+"。","<b>縱軸</b>：這麼多"+o.u+"內到達目標的機率。",
+    "<b>兩條線</b>：灰線是原本 1 倍，橘線是"+who2+"。活動的效益可以從兩個方向看："];
+  if(n>0) L.push("<b>好處一：機率提高</b>：看你設定的 "+n.toLocaleString("en-US")+" "+o.u+"（藍色直線），橘線比灰線高，到達的機率從 "+pc1(Fa(n))+" 提高到 "+pc1(Fb(n))+"。");
+  if(NA!==null&&NB!==null) L.push("<b>好處二：省下材料</b>：看期望到達目標的機率 "+(WW*100).toFixed(1)+"%（水平虛線），橘線比灰線早碰到這條線；左右相差的 "+(NA-NB).toLocaleString("en-US")+" "+o.u+"（"+NA.toLocaleString("en-US")+" → "+NB.toLocaleString("en-US")+"），就是可以少"+o.verb+"、省下材料的"+o.u+"數。");
+  L.push("<b>兩種好處是同一件事</b>：成功率提高，整條橘線往左上方移動；往上看是機率提高，往左看是"+o.u+"數減少。");
+  if(NA&&NB!==null){ const r=(NA-NB)/NA, base=1-1/m2, pr=x=>(x*100).toFixed(0)+"%";
+    const calc="成功率變成 "+m2+" 倍，單純換算大約少"+o.verb+" "+pr(base)+"（1 − 1 ÷ "+m2+"）；這裡實際少了 "+pr(r)+"（"+(NA-NB).toLocaleString("en-US")+" ÷ "+NA.toLocaleString("en-US")+"）";
+    if(r>base+0.02) L.push("<b>為什麼省下的比例比倍率還多</b>："+calc+"，"+(o.more||"因為失敗退級後要重爬的次數也一起變少。"));
+    else if(r<base-0.02) L.push("<b>為什麼省下的比例比倍率還少</b>："+calc+"，"+(o.less||"因為有一部分的次數不受成功率影響。"));
+    else L.push("<b>省下的比例怎麼來</b>："+calc+"。"); }
+  L.push("<b>一半的人</b>："+qb.q50.toLocaleString("en-US")+" "+o.u+"內到達（原本 1 倍要 "+qa.q50.toLocaleString("en-US")+" "+o.u+"）。",
+    "<b>9 成的人</b>："+(qb.q90?.toLocaleString("en-US")??"—")+" "+o.u+"內到達（原本 1 倍要 "+(qa.q90?.toLocaleString("en-US")??"—")+" "+o.u+"）。");
+  if(ev) L.push("<b>比較的倍率</b>：倍率設成 1 或 1.3 時，比較 1 倍和 1.3 倍；設成其他倍率時，比較那個倍率和 1 倍。");
+  $("evtNote").innerHTML=L.map(x=>"<li>"+x+"</li>").join("");
 }
 
 // ===== 止損策略 =====
@@ -615,7 +623,7 @@ function render(){
     drawDist(k=>t.out[Math.min(k,MAXN)*6+T],{K:Math.max(t.qEnd??MAXN,n),q10:t.q10,q50:t.med,q90:t.q90,n,x:"強化次數",at:"這一次",u:"次"});
     const m2=(cur.mult===1||cur.mult===1.3)?1.3:cur.mult, A=table(cur.start,T,1), Bt=table(cur.start,T,m2), Fo=tt=>k=>tt.out[Math.min(k,MAXN)*6+T];
     if(A.med!==null&&Bt.med!==null) drawEvent(Fo(A),Fo(Bt),{q50:A.med,q90:A.q90,K:A.qEnd??MAXN},{q50:Bt.med,q90:Bt.q90},m2,n,
-      {x:"強化次數",u:"次",verb:"強化",why:"<b>為什麼省得比 30% 還多</b>：成功率提高的同時，失敗倒退的次數也跟著變少。",why2:"<b>為什麼省得比倍率看起來還多</b>：成功率提高的同時，失敗倒退的次數也跟著變少。"});
+      {x:"強化次數",u:"次",verb:"強化"});
     else $("evtWrap").hidden=true;
   }
   else $("distPanel").hidden=true;
