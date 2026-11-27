@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>轉換時裝強化規劃</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: settings (parts table, stat priority, weeks) then result table ordered by priority, with cumulative cost */
+:root{
+  --bg:#f5f6f9; --panel:#ffffff; --fg:#1b2030; --muted:#636a80; --line:#dde1ea; --track:#eef0f5;
+  --bar:#4a63c9; --goal:#d98a1c; --bad:#c0483c;
+  --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#12141c; --panel:#1b1e29; --fg:#e7e9f1; --muted:#9298ad; --line:#2c3040; --track:#232736;
+  --bar:#7d93ee; --goal:#f0a640; --bad:#e9786b; color-scheme:dark}}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font-size:1.45rem;margin:0;text-wrap:balance}
+h2{font-size:1.05rem;margin:0 0 10px}
+.back{font-size:.88rem;color:var(--bar);text-decoration:none;display:inline-block;margin-bottom:8px}
+.sub{color:var(--muted);margin:6px 0 0;line-height:1.6}
+.meta{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+label,.lab{font-size:.9rem;color:var(--muted)}
+input[type=number],select{font:inherit;font-family:var(--mono);padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:6em}
+select{width:auto;font-family:var(--sans)}
+button{font:inherit;padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--muted);font-weight:500}
+td.num,th.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+tr.grp td{background:var(--track);font-weight:600;font-size:.82rem;color:var(--muted)}
+.tblwrap{overflow-x:auto}
+.prio{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.prio li{display:grid;grid-template-columns:1.6em 1.4em 1fr auto;gap:6px;align-items:center;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.prio li.off{opacity:.55}
+.prio .rk{font-family:var(--mono);color:var(--muted);font-size:.82rem;text-align:right}
+.prio button{padding:1px 7px;font-size:.8rem}
+.verdict{font-size:1rem;font-weight:600;line-height:1.7;margin:0;padding:10px 12px;border-radius:8px;border-left:4px solid var(--goal);background:color-mix(in srgb,var(--goal) 10%,var(--panel))}
+.res td{vertical-align:top}
+.strat{margin-top:12px;padding:10px 12px;border-radius:8px;border:1px solid color-mix(in srgb,var(--bar) 45%,var(--line));background:color-mix(in srgb,var(--bar) 7%,var(--panel))}
+.strat .lab2{font-size:.82rem;font-weight:600;color:var(--bar)}
+.strat p{margin:2px 0 0;font-weight:600;line-height:1.7}
+.gain{font-size:.82rem;line-height:1.5}
+.mat{font-size:.82rem;color:var(--muted);white-space:nowrap}
+.tie{font-size:.75rem;color:var(--goal);display:block}
+.fold{margin-top:14px}
+.fold summary{cursor:pointer;font-weight:500}
+.note{font-size:.84rem;color:var(--muted);line-height:1.7;padding-left:1.3em;margin:8px 0 0;display:flex;flex-direction:column;gap:4px}
+.chart svg{width:100%;height:auto;display:block;margin-top:10px}
+.chart .ax{stroke:var(--line)} .chart .tk{fill:var(--muted);font-size:12px;font-family:var(--mono)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.82rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.legend i.d{border-top-style:dashed}
+.ctbl{margin-top:10px}
+.busy{color:var(--muted);font-size:.85rem}
+.bad{color:var(--bad)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../">← 回到目錄</a>
+    <h1>轉換時裝強化規劃</h1>
+    <p class="sub">設定每個部位現在和想要的強化階段、在意的數值順序，以及願意花幾週買材料，算出建議的強化順序和大約要準備多少 G。</p>
+    <details class="fold">
+      <summary>規則說明</summary>
+      <ol class="note" style="color:var(--fg)">
+        <li>轉換時裝的強化成功率都是 100%，只要材料夠就一定成功。</li>
+        <li>材料：星之粉末、星之石（L+1～L+6）、星之珠寶（L+7）。星之石用 50 個粉末兌換 1 個；1 個星之珠寶可以換 50 個粉末，沒有次數限制。</li>
+        <li>材料都用「珠寶星之球」取得：每週限購的 11 顆 225G，常駐的 11 顆 300G（55 顆 1,500G 的單價相同）。每顆平均開出粉末 23.5 個、星之珠寶 0.46 個。</li>
+        <li>L+0 是取得時裝的階段：由 S+10 進化或直接購買，兩者需要的粉末不同。</li>
+        <li>台服目前只有防具和飾品可以強化到 L+7；武器最高 L+6，特殊防具的 L+7 尚未開放（頁面仍可選，供參考）。</li>
+      </ol>
+    </details>
+    <p class="meta">製作日期：2026-11-27</p>
+  </header>
+
+  <section class="panel">
+    <div class="cols">
+      <div>
+        <h2>各部位的強化計畫</h2>
+        <div class="tblwrap"><table id="parts"><thead><tr><th>部位</th><th>目前</th><th>目標</th></tr></thead><tbody></tbody></table></div>
+        <div class="row" style="margin-top:8px">
+          <button id="allSix">全部設為 L+6</button>
+          <button id="allMax">目標全部設為最高</button>
+          <button id="allKeep">目標全部設為不強化</button>
+        </div>
+      </div>
+      <div>
+        <h2>在意的數值順序</h2>
+        <p class="lab" style="margin:0 0 8px">用 ↑ ↓ 調整順序；勾選的數值才會用來決定強化順序。先比第一項，相同時再比下一項。</p>
+        <ul class="prio" id="prio"></ul>
+        <h2 style="margin-top:16px">花幾週買材料</h2>
+        <div class="row"><input type="number" id="weeks" min="0" max="520" step="1" value="0" autocomplete="off" aria-label="週數"><span class="lab">週（0 = 立刻買齊）</span></div>
+        <div class="strat" style="margin-top:12px"><div class="lab2">購買策略</div><p id="buy"></p>
+          <details class="fold" style="margin-top:6px">
+            <summary>為什麼這樣買</summary>
+            <ul class="note">
+              <li><b>每週限購的珠寶星之球最便宜</b>：每週限購的 11 顆是 225G，每顆約 20.5G；常駐販賣的 11 顆是 300G，每顆約 27.3G（55 顆 1,500G 的單價相同）。所以每週能買就先買，不夠的部分才用常駐的補。</li>
+              <li><b>只買珠寶星之球</b>：每顆平均開出粉末 23.5 個、星之珠寶 0.46 個。用不到的珠寶換成粉末（1 → 50，沒有次數限制），每顆等於約 46.5 個粉末。換算下來，每個粉末只要約 0.44G（每週）或 0.59G（常駐），比星之粉末球（約 0.80～0.94G）便宜，所以不買星之粉末球。</li>
+              <li><b>星之石用粉末換</b>：50 個粉末換 1 個星之石。</li>
+              <li><b>用星之石換星之珠寶要看手上的粉末</b>：5 個星之石換 1 個珠寶，等於用 250 個粉末換 1 個珠寶（每週最多 10 個）。如果要另外花 G 買粉末來換，1 個珠寶約要 110～150G，比開珠寶星之球（約 22～29G）貴很多，所以不這樣做。但如果手上的粉末比這次計畫需要的還多（例如粉末 3,000 個、珠寶只有 6 個，卻只打算強化一件），多出來的粉末換成珠寶就能少買幾次珠寶星之球；計算器會自動判斷，有用到時會寫在購買策略裡。</li>
+              <li><b>時間越長越省，但有上限</b>：週數越多，能買的每週包越多；不過週數超過「只靠每週包約需」之後，材料已經夠了，花費就不會再下降。</li>
+            </ul>
+          </details>
+        </div>
+        <h2 style="margin-top:16px">目前持有的材料</h2>
+        <div class="row" style="gap:8px">
+          <label class="row" style="gap:6px">星之粉末<input type="number" id="hP" min="0" step="1" value="0" autocomplete="off"></label>
+          <label class="row" style="gap:6px">星之石<input type="number" id="hS" min="0" step="1" value="0" autocomplete="off"></label>
+          <label class="row" style="gap:6px">星之珠寶<input type="number" id="hJ" min="0" step="1" value="0" autocomplete="off"></label>
+        </div>
+        <h2 style="margin-top:16px">需要的材料總計</h2>
+        <table id="matT"></table>
+        <h2 style="margin-top:16px">預計購買</h2>
+        <table id="buyT"></table>
+        <p class="lab" style="margin:6px 0 0">依上方設定的週數與購買策略，全部完成時的平均。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <p class="verdict" id="verdict"></p>
+    <p class="busy" id="busy" hidden>計算中…</p>
+    <div class="tblwrap" style="margin-top:12px"><table class="res" id="res"></table></div>
+    <ul class="note" id="resNote"></ul>
+    <details class="fold chart">
+      <summary>比較不同的兌換方案</summary>
+      <div id="c1"></div><div class="legend" id="c1l"></div>
+      <table class="ctbl" id="c1t"></table>
+      <ul class="note" id="c1n"></ul>
+    </details>
+    <details class="fold chart">
+      <summary>多等幾週能省多少</summary>
+      <div id="c2"></div><div class="legend" id="c2l"></div>
+      <ul class="note" id="c2n"></ul>
+    </details>
+    <details class="fold chart">
+      <summary>預算與完成機率：立刻買齊 vs. 慢慢累積</summary>
+      <div id="c3"></div><div class="legend" id="c3l"></div>
+      <ul class="note" id="c3n"></ul>
+    </details>
+    <details class="fold">
+      <summary>計算方式與假設</summary>
+      <ul class="note">
+        <li><b>強化順序</b>：每個部位從「目前」強化到「目標」看成一件事，比較各部位總共增加的數值。先比順序第一的數值，增加較多的排前面；相同時比下一項。勾選的數值全部相同時並列，順序可以隨意調整。</li>
+        <li><b>材料</b>：星之石一律以 50 個粉末計算；粉末與星之石不夠時，用多出來的星之珠寶換成粉末（1 → 50）。星之粉末球比珠寶星之球貴，所以不列入。</li>
+        <li><b>持有的材料</b>：先用手上的粉末、星之石、星之珠寶，不夠的部分才買。珠寶不夠、但手上的粉末比計畫需要的還多時，會用「粉末 → 星之石 → 星之珠寶」補珠寶（每週最多 10 個，週數為 0 時以 1 週計）。</li>
+        <li><b>週數</b>：在設定的週數內，每週買一次每週的 11 顆（225G），材料夠了就停；週數到了還不夠，就用常駐的 11 顆（300G）補足。</li>
+        <li><b>累計花費</b>：依建議順序，做到這一件為止所需的材料放在一起計算。「這一件」是累計平均的差。</li>
+        <li><b>9 成把握</b>：100 個人照這樣買，大約 90 個人花的錢不超過這個數字。</li>
+        <li><b>約需週數</b>：只靠每週的 11 顆，平均要買幾週才夠做到這一件。</li>
+        <li>數字由開箱機率模擬 4,000 次得到（兌換方案比較為 2,000 次），每次重新計算會有些微差異；金額只算 G，不包含遊戲內的金幣手續費。</li>
+      </ul>
+      <h3 style="font-size:.95rem;margin:14px 0 6px">購買選項（G 以台幣 1:1 購買）</h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th>商品</th><th>購買方式</th><th class=num>價格</th><th class=num>每顆單價</th><th>本頁是否採用</th></tr></thead>
+        <tbody>
+          <tr><td>珠寶星之球</td><td>每週限購，一次 11 顆</td><td class=num>225G</td><td class=num>約 20.5G</td><td>採用（優先）</td></tr>
+          <tr><td>珠寶星之球</td><td>常駐販賣，一次 1 顆</td><td class=num>30G</td><td class=num>30.0G</td><td>不採用（較貴）</td></tr>
+          <tr><td>珠寶星之球</td><td>常駐販賣，一次 11 顆</td><td class=num>300G</td><td class=num>約 27.3G</td><td>採用（不足時補足）</td></tr>
+          <tr><td>珠寶星之球</td><td>常駐販賣，一次 55 顆</td><td class=num>1,500G</td><td class=num>約 27.3G</td><td>單價和 11 顆相同</td></tr>
+          <tr><td>星之粉末球</td><td>每日限購，一次 5 顆</td><td class=num>50G</td><td class=num>10.0G</td><td>只在方案 B 比較</td></tr>
+          <tr><td>星之粉末球</td><td>每週限購，一次 20 顆</td><td class=num>190G</td><td class=num>9.5G</td><td>只在方案 B 比較</td></tr>
+        </tbody></table></div>
+      <ul class="note"><li>購買都是「一次買一定數量」，例如每週限購的星之粉末球只能一次買 20 顆。每日／每週的更新時間依遊戲內說明。</li>
+        <li>星之粉末球限定販賣到 2026/12/15；珠寶星之球販賣到另行公告為止。</li></ul>
+      <h3 style="font-size:.95rem;margin:14px 0 6px">內容物機率</h3>
+      <div class="cols" style="grid-template-columns:1fr 1fr">
+        <div class="tblwrap"><table>
+          <thead><tr><th>珠寶星之球</th><th class=num>機率</th></tr></thead>
+          <tbody><tr><td>星之粉末 25 個</td><td class=num>46%</td></tr><tr><td>星之粉末 40 個</td><td class=num>30%</td></tr>
+            <tr><td>星之珠寶 1 個</td><td class=num>12%</td></tr><tr><td>星之珠寶 2 個</td><td class=num>6%</td></tr>
+            <tr><td>星之珠寶 3 個</td><td class=num>4%</td></tr><tr><td>星之珠寶 5 個</td><td class=num>2%</td></tr>
+            <tr><td><b>平均每顆</b></td><td class=num>粉末 23.5、珠寶 0.46</td></tr></tbody></table></div>
+        <div class="tblwrap"><table>
+          <thead><tr><th>星之粉末球</th><th class=num>機率</th></tr></thead>
+          <tbody><tr><td>星之粉末 5 個</td><td class=num>50%</td></tr><tr><td>星之粉末 8 個</td><td class=num>20%</td></tr>
+            <tr><td>星之粉末 10 個</td><td class=num>10%</td></tr><tr><td>星之粉末 15 個</td><td class=num>5%</td></tr>
+            <tr><td>星之粉末 20 個</td><td class=num>4%</td></tr><tr><td>星之粉末 30 個</td><td class=num>3%</td></tr>
+            <tr><td>星之粉末 40 個</td><td class=num>2%</td></tr><tr><td>星之粉末 100 個</td><td class=num>1%</td></tr>
+            <tr><td>星之石 1 個</td><td class=num>5%</td></tr>
+            <tr><td><b>平均每顆</b></td><td class=num>粉末 9.35、星之石 0.05</td></tr></tbody></table></div>
+      </div>
+      <h3 style="font-size:.95rem;margin:14px 0 6px">兌換</h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th>兌換</th><th>限制</th><th>本頁是否採用</th></tr></thead>
+        <tbody>
+          <tr><td>50 星之粉末 → 1 星之石</td><td>無</td><td>採用（星之石都這樣取得）</td></tr>
+          <tr><td>1 星之珠寶 → 50 星之粉末</td><td>無</td><td>採用（多的珠寶換成粉末）</td></tr>
+          <tr><td>1 星之石 → 25 星之粉末</td><td>無</td><td>不採用（會虧）</td></tr>
+          <tr><td>5 星之石 → 1 星之珠寶</td><td>每週 10 次（最多用 50 個星之石）</td><td>只在手上的粉末有多時採用（見下方說明）</td></tr>
+        </tbody></table></div>
+      <p class="lab" style="margin:8px 0 0">機率、價格與兌換比例依 2026/11/27 遊戲內的說明整理，之後可能變動。</p>
+    </details>
+  </section>
+</div>
+
+<script>
+// ===== 資料 =====
+// 每階段需要的材料：[粉末, 星之石, 星之珠寶]；L+0 的粉末分成 進化／直購
+const MAT={
+  weapon:{l0:[1500,2000],steps:[null,[600,3,0],[600,3,0],[600,3,0],[600,5,0],[600,5,0],[600,5,0]],max:6},
+  armor:{l0:[1000,1500],steps:[null,[450,1,0],[450,1,0],[450,1,0],[450,3,0],[450,3,0],[450,3,0],[1500,0,25]],max:7},
+  acc:{l0:[1150,1600],steps:[null,[500,3,0],[500,3,0],[500,3,0],[500,5,0],[500,5,0],[500,5,0],[1500,0,30]],max:7},
+  special:{l0:[1300,1800],steps:[null,[550,3,0],[550,3,0],[550,3,0],[550,5,0],[550,5,0],[550,5,0],[1500,0,30]],max:7}};
+const L0_STONE=3;
+// 各部位各階段的數值（L+0 起）；沒有的數值不寫
+const W=10000;
+const S=(o)=>o;
+const PARTS=[
+ {id:"mw",name:"主武器",g:"weapon",lv:[
+  {雙攻:162000,"雙攻%":12,"屬攻%":12,暴擊:50000,"暴擊%":5.5,暴傷:50000,終傷:500},
+  {雙攻:212000,"雙攻%":13.5,"屬攻%":14.5,暴擊:75000,"暴擊%":5.5,暴傷:275000,終傷:1000},
+  {雙攻:287000,"雙攻%":15,"屬攻%":17,暴擊:100000,"暴擊%":5.5,暴傷:500000,終傷:1500},
+  {雙攻:387000,"雙攻%":16.5,"屬攻%":19.5,暴擊:125000,"暴擊%":5.5,暴傷:725000,終傷:2000},
+  {雙攻:487000,"雙攻%":18,"屬攻%":22,暴擊:150000,"暴擊%":5.5,暴傷:950000,終傷:2500},
+  {雙攻:612000,"雙攻%":19.5,"屬攻%":24.5,暴擊:175000,"暴擊%":5.5,暴傷:1175000,終傷:3000},
+  {雙攻:762000,"雙攻%":21,"屬攻%":27,暴擊:200000,"暴擊%":5.5,暴傷:1400000,終傷:3500}]},
+ {id:"sw",name:"副武器",g:"weapon",lv:[
+  {雙攻:128000,"雙攻%":12,"屬攻%":20,暴傷:50000,終傷:500},
+  {雙攻:178000,"雙攻%":14.5,"屬攻%":21.5,暴擊:25000,暴傷:275000,終傷:1000},
+  {雙攻:253000,"雙攻%":17,"屬攻%":23,暴擊:50000,暴傷:500000,終傷:1500},
+  {雙攻:353000,"雙攻%":19.5,"屬攻%":24.5,暴擊:75000,暴傷:725000,終傷:2000},
+  {雙攻:453000,"雙攻%":22,"屬攻%":26,暴擊:100000,暴傷:950000,終傷:2500},
+  {雙攻:578000,"雙攻%":24.5,"屬攻%":27.5,暴擊:125000,暴傷:1175000,終傷:3000},
+  {雙攻:728000,"雙攻%":27,"屬攻%":29,暴擊:150000,暴傷:1400000,終傷:3500}]},
+ {id:"hd",name:"頭盔",g:"armor",lv:[[26,17,350,210,45],[36,19,500,300,46],[46,21,650,400,47.5],[56,23,800,500,49.5],[71,25,950,600,51.5],[86,27,1100,700,54],[101,29,1250,800,56.5],[146,35,1700,1000,58]]
+   .map(([a,ap,fd,hp,hpp])=>({雙攻:a*W,"雙攻%":ap,終傷:fd,"力敏智%":2,"體質%":15,HP:hp*W,"HP%":hpp}))},
+ {id:"up",name:"上衣",g:"armor",lv:[[16.5,12,11,350,210,35],[18,13,12,500,300,36],[19,14,13,650,400,37.5],[20,15,14,800,500,39.5],[21.5,16,15,950,600,41.5],[23,17,16,1100,700,44],[24.5,18,17,1250,800,46.5],[29,21,17,1700,1000,48]]
+   .map(([ap,ep,cp,fd,hp,hpp])=>({"雙攻%":ap,"屬攻%":ep,"暴擊%":cp,終傷:fd,"力敏智%":15,"體質%":15,HP:hp*W,"HP%":hpp}))},
+ {id:"lo",name:"下裝",g:"armor",lv:[[16.5,25,8,300,210,16],[18,25,10,500,300,17],[19.5,25,11,650,400,18.5],[21,25,12,800,500,20.5],[22.5,25,13,950,600,22.5],[24,25,14,1100,700,25],[25.5,25,15,1300,800,27.5],[28.5,25,15,1900,1000,29]]
+   .map(([ap,ep,cp,fd,hp,hpp])=>({"雙攻%":ap,"屬攻%":ep,"暴擊%":cp,終傷:fd,HP:hp*W,"HP%":hpp}))},
+ {id:"gl",name:"手套",g:"armor",lv:[[11,13.5,11,350,210,25],[12,15,12,500,300,26],[13,16.5,13,650,400,28],[14,18,14,800,500,30.5],[15,19.5,15,950,600,32],[16,21,16,1100,700,34],[17,22.5,17,1250,800,36.5],[21.5,25.5,17,1700,1000,38]]
+   .map(([ap,ep,cp,fd,hp,hpp])=>({"雙攻%":ap,"屬攻%":ep,"暴擊%":cp,終傷:fd,力敏智:5550,體質:5950,HP:hp*W,"HP%":hpp}))},
+ {id:"sh",name:"鞋子",g:"armor",lv:[[16,14.5,1050,110,16],[17,15,1200,200,17],[18,15.5,1350,300,18.5],[19,16,1500,400,20.5],[20,16.5,1650,500,22.5],[21,17,1800,600,25],[22,17.5,1950,700,27.5],[26.5,20.5,2400,900,29]]
+   .map(([ap,ep,fd,hp,hpp])=>({"雙攻%":ap,"屬攻%":ep,終傷:fd,"力敏智%":2,"體質%":3,HP:hp*W,"HP%":hpp,移速:15}))},
+ {id:"nk",name:"項鍊",g:"acc",lv:[[60000,10.5,4.5,400000,1300,45000],[100000,12.5,6.5,625000,1500,55000],[150000,15,9,737500,1500,70000],[200000,17.5,11.5,850000,1500,90000],[260000,20.5,13.5,962500,1500,90000],[310000,23,16,1075000,1500,95000],[360000,25.5,18.5,1187500,1500,95000],[510000,33,26,1300000,1500,95000]]
+   .map(([a,ap,ep,cd,fd,df])=>({雙攻:a,"雙攻%":ap,"屬攻%":ep,暴傷:cd,終傷:fd,力敏智體:1000,雙防:df}))},
+ {id:"er",name:"耳環",g:"acc",lv:[[115000,10.5,4,7,1300,400,56],[150000,12,5,8,1500,500,57],[200000,13.5,6,9,1500,600,58],[250000,15,7,10,1500,700,59],[305000,16.5,8,10,1500,800,60],[365000,18,9,10,1500,900,61],[415000,19.5,10,10,1500,1000,62],[565000,24,13,10,1500,1150,65]]
+   .map(([a,ap,ep,cp,fd,hp,hpp])=>({雙攻:a,"雙攻%":ap,"屬攻%":ep,暴擊:120000,"暴擊%":cp,暴傷:300000,終傷:fd,HP:hp*W,"HP%":hpp}))},
+ ...["戒指 1","戒指 2"].map((nm,i)=>({id:"r"+(i+1),name:nm,g:"acc",lv:[[160000,15.5,8.5,60000,150000,1300],[200000,17,10,80000,262500,1500],[250000,18.5,11.5,100000,375000,1500],[300000,20.5,13.5,120000,487500,1500],[360000,22.5,15.5,140000,600000,1500],[410000,25,18,160000,712500,1500],[460000,27.5,20.5,180000,825000,1500],[610000,35,28,210000,1050000,1500]]
+   .map(([a,ap,ep,c,cd,fd])=>({雙攻:a,"雙攻%":ap,"屬攻%":ep,暴擊:c,暴傷:cd,終傷:fd}))})),
+ {id:"wg",name:"翅膀",g:"special",lv:[[430000,38,50000,50000,2200],[550000,41,75000,275000,2400],[700000,44,100000,500000,2600],[850000,47,125000,725000,2800],[1010000,49,150000,950000,3000],[1170000,51,175000,1175000,3100],[1330000,53,200000,1400000,3200],[1930000,59,275000,2075000,3450]]
+   .map(([a,ap,c,cd,fd])=>({雙攻:a,"雙攻%":ap,暴擊:c,暴傷:cd,終傷:fd,"移速%":15,"安移%":20}))},
+ {id:"tl",name:"尾巴",g:"special",lv:[[300000,33,15,1500,7],[400000,34,16,1700,8],[500000,35.5,17.5,1900,9.5],[600000,37,19,2100,11.5],[650000,38.5,20.5,2300,13],[725000,40,22,2400,14.5],[800000,42,24,2500,16],[1000000,49.5,31.5,2750,16]]
+   .map(([a,ap,ep,fd,dp])=>({雙攻:a,"雙攻%":ap,"屬攻%":ep,終傷:fd,"雙防%":dp}))},
+ {id:"tt",name:"刺青",g:"special",lv:[[430000,50,50000,10,25000,2200,6],[550000,51.5,75000,11,250000,2300,7],[700000,53,100000,12,475000,2400,8.5],[850000,54.5,125000,13,700000,2500,11],[1010000,56,150000,13,925000,2600,12.5],[1170000,57.5,175000,13,1150000,2650,14],[1330000,59,200000,13,1375000,2700,16],[1780000,65,225000,13,2050000,2850,16]]
+   .map(([a,ep,c,cp,cd,fd,dp])=>({雙攻:a,"屬攻%":ep,暴擊:c,"暴擊%":cp,暴傷:cd,終傷:fd,"雙防%":dp}))},
+];
+const GROUP_NAME={weapon:"武器",armor:"防具",acc:"飾品",special:"特殊防具"};
+const STATS=["屬攻%","雙攻%","雙攻","HP","HP%"];   // 其他數值（暴擊、終傷等）不列入考量
+const PCT=s=>s.endsWith("%");
+// 珠寶星之球：粉末 25（46%）、粉末 40（30%）、珠寶 1／2／3／5（12%／6%／4%／2%）
+const BALL=[[25,0,.46],[40,0,.30],[0,1,.12],[0,2,.06],[0,3,.04],[0,5,.02]];
+const WEEK_G=225, PERM_G=300, PACK=11, TRIALS=4000, STONE_P=50, JEWEL_P=50, S2J=5, S2J_WEEK=10;   // 5 星之石 → 1 星之珠寶，每週 10 次
+
+// ===== 狀態 =====
+// 目前：-2 = 未取得（直購）、-1 = 未取得（進化）、0～7 = L+0～L+7
+const st={cur:{},tgt:{},prio:STATS.map(s=>({s,on:true})),weeks:0,inv:{p:0,s:0,j:0}};
+PARTS.forEach(p=>{ st.cur[p.id]=6; st.tgt[p.id]=MAT[p.g].max===7&&(p.g==="armor"||p.g==="acc")?7:6; });
+
+// ===== 計算 =====
+function need(p){ // 從目前到目標：[粉末（含星之石換算）, 珠寶, 粉末, 星之石]
+  const m=MAT[p.g]; let c=st.cur[p.id], t=st.tgt[p.id], pw=0, stn=0, jw=0;
+  if(c<0){ pw+=m.l0[c===-1?0:1]; stn+=L0_STONE; c=0; }
+  for(let k=c+1;k<=t;k++){ const [a,b,j]=m.steps[k]; pw+=a; stn+=b; jw+=j; }
+  return {P:pw+stn*STONE_P, J:jw, pw, stn, jw};
+}
+function gain(p){ const c=st.cur[p.id], t=st.tgt[p.id], A=c<0?{}:p.lv[c], B=p.lv[t], g={};
+  for(const s of STATS){ const d=(B[s]||0)-(A[s]||0); if(Math.abs(d)>1e-9) g[s]=Math.round(d*1000)/1000; } return g; }
+function cmp(ga,gb){ for(const {s,on} of st.prio){ if(!on) continue; const d=(gb[s]||0)-(ga[s]||0); if(Math.abs(d)>1e-9) return d; } return 0; }
+// 一包（11 顆）的分布：精確列舉後抽樣
+const PACKDIST=(()=>{ let d=new Map([["0,0",1]]);
+  for(let i=0;i<PACK;i++){ const n=new Map(); for(const [k,pr] of d){ const [a,b]=k.split(",").map(Number);
+      for(const [x,y,q] of BALL){ const kk=(a+x)+","+(b+y); n.set(kk,(n.get(kk)||0)+pr*q); } } d=n; }
+  const arr=[...d].map(([k,p])=>{ const [a,b]=k.split(",").map(Number); return [a,b,p]; }); let c=0; const cum=arr.map(x=>c+=x[2]);
+  return {arr,cum}; })();
+let seed=12345; const rnd=()=>{ seed=(seed*1664525+1013904223)>>>0; return seed/4294967296; };
+function samplePack(){ const u=rnd()*PACKDIST.cum[PACKDIST.cum.length-1], c=PACKDIST.cum; let lo=0,hi=c.length-1; while(lo<hi){ const m=(lo+hi)>>1; if(c[m]<u) lo=m+1; else hi=m; } return PACKDIST.arr[lo]; }
+// reqs：依順序的累計需求 [{P,J}]；回傳每一階段的花費樣本與包數樣本
+// 材料夠不夠：p 是粉末（星之石以 50 個粉末計）、j 是星之珠寶。
+// 珠寶夠時，多的珠寶換成粉末；珠寶不夠時，可以用粉末換星之石再換珠寶（1 個珠寶要 250 個粉末，總共最多 X 個）。
+// 回傳 -1 = 不夠；0 = 夠，不用星之石換珠寶；正數 = 需要用星之石換的珠寶數。
+function enough(p,j,r,X){ if(j>=r.J) return p+JEWEL_P*(j-r.J)>=r.P?0:-1; const x=r.J-j; return x<=X&&p-x*S2J*STONE_P>=r.P?x:-1; }
+const convCap=weeks=>S2J_WEEK*Math.max(1,weeks);
+function simulate(reqs,weeks){
+  const K=reqs.length, cost=reqs.map(()=>new Float64Array(TRIALS)), packs=reqs.map(()=>new Float64Array(TRIALS)), conv=reqs.map(()=>new Float64Array(TRIALS)), X=convCap(weeks);
+  seed=12345;
+  for(let t=0;t<TRIALS;t++){ let p=st.inv.p+st.inv.s*STONE_P, j=st.inv.j, m=0, k=0;
+    while(k<K){ let e; while(k<K&&(e=enough(p,j,reqs[k],X))>=0){ packs[k][t]=m; conv[k][t]=e; cost[k][t]=WEEK_G*Math.min(m,weeks)+PERM_G*Math.max(0,m-weeks); k++; }
+      if(k<K){ const [a,b]=samplePack(); p+=a; j+=b; m++; } } }
+  return {cost,packs,conv};
+}
+const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const q90=a=>{ const s=Float64Array.from(a).sort(); return s[Math.floor(s.length*.9)]; };
+const g10=x=>Math.round(x/10)*10;
+const fmt=x=>Math.round(x).toLocaleString("en-US");
+const fmtG=x=>fmt(g10(x))+"G";
+const fmtS=(s,v)=>{ const sign=v>0?"+":"−", a=Math.abs(v);
+  if(PCT(s)) return s+" "+sign+(+a.toFixed(2)); if((s==="雙攻"||s==="HP")&&a>=W&&a%W===0&&a>=100000) return s+" "+sign+(a/W).toLocaleString("en-US")+"萬"; return s+" "+sign+a.toLocaleString("en-US"); };
+
+// ===== 畫面 =====
+const $=id=>document.getElementById(id);
+const lvName=v=>v===-2?"未取得（直購）":v===-1?"未取得（進化）":"L+"+v;
+function buildParts(){
+  const tb=$("parts").tBodies[0]; tb.innerHTML=""; let last=null;
+  PARTS.forEach(p=>{
+    if(p.g!==last){ last=p.g; const r=tb.insertRow(); r.className="grp"; const c=r.insertCell(); c.colSpan=3; c.textContent=GROUP_NAME[p.g]+(p.g==="special"?"（L+7 台服尚未開放）":p.g==="weapon"?"（最高 L+6）":""); }
+    const r=tb.insertRow(); r.insertCell().textContent=p.name;
+    const sc=document.createElement("select"), tc=document.createElement("select"); sc.id="c_"+p.id; tc.id="t_"+p.id;
+    sc.setAttribute("aria-label",p.name+"目前"); tc.setAttribute("aria-label",p.name+"目標");
+    r.insertCell().appendChild(sc); r.insertCell().appendChild(tc);
+    sc.addEventListener("change",()=>{ st.cur[p.id]=+sc.value; if(st.tgt[p.id]<Math.max(0,st.cur[p.id])) st.tgt[p.id]=Math.max(0,st.cur[p.id]); fillSel(p); render(); });
+    tc.addEventListener("change",()=>{ st.tgt[p.id]=+tc.value; render(); });
+    fillSel(p);
+  });
+}
+function fillSel(p){
+  const m=MAT[p.g].max, sc=$("c_"+p.id), tc=$("t_"+p.id);
+  sc.innerHTML=""; [-1,-2,...Array.from({length:m+1},(_,i)=>i)].forEach(v=>sc.add(new Option(lvName(v),v))); sc.value=st.cur[p.id];
+  tc.innerHTML=""; const lo=Math.max(0,st.cur[p.id]);
+  for(let v=lo;v<=m;v++) tc.add(new Option(v===st.cur[p.id]?"不強化（L+"+v+"）":"L+"+v,v));
+  if(st.tgt[p.id]<lo) st.tgt[p.id]=lo; tc.value=st.tgt[p.id];
+}
+function buildPrio(){
+  const ul=$("prio"); ul.innerHTML="";
+  let n=0;
+  st.prio.forEach((x,i)=>{ const li=document.createElement("li"); if(!x.on) li.className="off";
+    li.innerHTML='<span class="rk">'+(x.on?++n:"")+'</span><input type="checkbox" '+(x.on?"checked":"")+' aria-label="納入 '+x.s+'"><span>'+x.s+'</span><span><button aria-label="'+x.s+' 往上">↑</button> <button aria-label="'+x.s+' 往下">↓</button></span>';
+    const [cb]=li.getElementsByTagName("input"), [up,dn]=li.getElementsByTagName("button");
+    cb.onchange=()=>{ x.on=cb.checked; buildPrio(); render(); };
+    up.onclick=()=>{ if(i>0){ [st.prio[i-1],st.prio[i]]=[st.prio[i],st.prio[i-1]]; buildPrio(); render(); } };
+    dn.onclick=()=>{ if(i<st.prio.length-1){ [st.prio[i+1],st.prio[i]]=[st.prio[i],st.prio[i+1]]; buildPrio(); render(); } };
+    ul.appendChild(li); });
+}
+let timer=null; function render(){ $("busy").hidden=false; clearTimeout(timer); timer=setTimeout(compute,20); }
+function compute(){
+  const W8=st.weeks, items=PARTS.filter(p=>st.tgt[p.id]>st.cur[p.id]||st.cur[p.id]<0).map(p=>({p,g:gain(p),n:need(p)}));
+  const on=st.prio.filter(x=>x.on).map(x=>x.s);
+  if(!items.length){ $("verdict").textContent="每個部位的目標都和目前相同，請先選擇想要強化的部位。"; $("res").innerHTML=""; $("resNote").innerHTML=""; ["matT","buyT","c1","c1l","c1t","c1n","c2","c2l","c2n","c3","c3l","c3n"].forEach(i=>$(i).innerHTML=""); $("buy").textContent="—"; $("busy").hidden=true; return; }
+  if(!on.length){ $("verdict").innerHTML='<span class="bad">請至少勾選一項數值，才能決定強化順序。</span>'; }
+  items.sort((a,b)=>cmp(a.g,b.g));
+  // 並列的組別編號
+  let rank=0; items.forEach((it,i)=>{ if(i===0||cmp(items[i-1].g,it.g)!==0) rank=i+1; it.rank=rank; });
+  let P=0,J=0; const reqs=items.map(it=>{ P+=it.n.P; J+=it.n.J; return {P,J}; });
+  const {cost,packs,conv}=simulate(reqs,W8), m=cost.map(mean), q=cost.map(q90), wk=packs.map(mean);
+  const rows=items.map((it,i)=>{ const gs=Object.keys(it.g).sort((a,b)=>{ const ia=on.indexOf(a), ib=on.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
+      const main=gs.filter(s=>on.includes(s)).map(s=>fmtS(s,it.g[s])), other=gs.filter(s=>!on.includes(s)).map(s=>fmtS(s,it.g[s]));
+      const tie=items.filter(x=>x.rank===it.rank).length>1;
+      return "<tr><td class=num>"+it.rank+(tie?'<span class="tie">並列</span>':"")+"</td><td>"+it.p.name+'<div class="mat">'+lvName(st.cur[it.p.id])+" → L+"+st.tgt[it.p.id]+"</div></td>"+
+        '<td class="gain">'+(main.join("、")||"—")+(other.length?'<div class="mat">其他：'+other.join("、")+"</div>":"")+"</td>"+
+        '<td class="mat">粉末 '+fmt(it.n.pw)+(it.n.stn?"<br>星之石 "+it.n.stn:"")+(it.n.jw?"<br>星之珠寶 "+it.n.jw:"")+"</td>"+
+        "<td class=num>"+fmtG(m[i]-(i?m[i-1]:0))+"</td><td class=num>"+fmtG(m[i])+"</td><td class=num>"+fmtG(q[i])+"</td><td class=num>"+(Math.round(wk[i]*10)/10)+" 週</td></tr>"; });
+  $("res").innerHTML="<thead><tr><th class=num>順序</th><th>部位</th><th>增加的數值（依你的順序）</th><th>需要的材料</th><th class=num>這一件平均</th><th class=num>累計平均</th><th class=num>累計 9 成把握</th><th class=num>只靠每週包約需</th></tr></thead><tbody>"+rows.join("")+"</tbody>";
+  const last=items.length-1, needW=Math.ceil(wk[last]);
+  $("buy").textContent = W8===0 ? "只買「珠寶星之球」：用常駐販賣的 11 顆（300G）買到材料夠為止，多的星之珠寶換成粉末。如果願意等，每週限購的 11 顆（225G）更便宜，平均約 "+needW+" 週就能買齊。"
+    : W8>=needW ? "只買「珠寶星之球」：這 "+W8+" 週內每週買一次每週限購的 11 顆（225G），材料夠了就停，多的星之珠寶換成粉末。照平均來看，大約 "+needW+" 週就夠了；運氣不好時再用常駐販賣的 11 顆（300G）補足。"
+    : "只買「珠寶星之球」：這 "+W8+" 週內每週買一次每週限購的 11 顆（225G），不夠再用常駐販賣的 11 顆（300G）補足，多的星之珠寶換成粉末。";
+  if(on.length) $("verdict").textContent="建議依表中的順序強化："+items.map(x=>x.p.name).join(" → ")+"。全部完成平均約 "+fmtG(m[last])+"，想要有 9 成把握約 "+fmtG(q[last])+"。";
+  const ties=new Set(items.filter(it=>items.filter(x=>x.rank===it.rank).length>1).map(it=>it.rank));
+  const notes=[];
+  if(ties.size) notes.push("標示「並列」的部位，在勾選的數值上增加量完全相同，順序可以隨意調整。");
+  notes.push("想在預算內分階段進行：看「累計平均」或「累計 9 成把握」，找出預算能做到哪一件。");
+  if(W8>0) notes.push("週數超過「只靠每週包約需」之後，材料已經夠了，花費就不會再下降。");
+  $("resNote").innerHTML=notes.map(x=>"<li>"+x+"</li>").join("");
+  const tp=items.reduce((a,x)=>a+x.n.pw,0), ts=items.reduce((a,x)=>a+x.n.stn,0), tj=items.reduce((a,x)=>a+x.n.jw,0), mA=packs[last];
+  const I=st.inv;
+  $("matT").innerHTML="<thead><tr><th>材料</th><th class=num>需要</th><th class=num>持有</th></tr></thead><tbody><tr><td>星之粉末</td><td class=num>"+fmt(tp)+"</td><td class=num>"+fmt(I.p)+"</td></tr>"+
+    "<tr><td>星之石"+(ts?"（可用 "+fmt(ts*STONE_P)+" 個粉末兌換）":"")+"</td><td class=num>"+fmt(ts)+"</td><td class=num>"+fmt(I.s)+"</td></tr>"+
+    "<tr><td>星之珠寶</td><td class=num>"+fmt(tj)+"</td><td class=num>"+fmt(I.j)+"</td></tr></tbody>";
+  const cv=mean(conv[last]);
+  const wkU=mean(Float64Array.from(mA,x=>Math.min(x,W8))), pmU=mean(Float64Array.from(mA,x=>Math.max(0,x-W8)));
+  $("buyT").innerHTML="<tbody>"+(W8>0?"<tr><td>每週限購的 11 顆（225G）</td><td class=num>"+(Math.round(wkU*10)/10)+" 次</td></tr>":"")+
+    "<tr><td>常駐販賣的 11 顆（300G）</td><td class=num>"+(Math.round(pmU*10)/10)+" 次</td></tr><tr><td>珠寶星之球合計</td><td class=num>約 "+fmt(mean(mA)*PACK)+" 顆</td></tr>"+
+    (cv>=1?"<tr><td>用星之石換星之珠寶</td><td class=num>平均 "+(Math.round(cv*10)/10)+" 個</td></tr>":"")+
+    "<tr><td>花費（平均／9 成把握）</td><td class=num>"+fmtG(m[last])+"／"+fmtG(q[last])+"</td></tr></tbody>";
+  if(cv>=1) $("buy").textContent+="另外，粉末比這次計畫需要的還多，可以先換成星之石，再換成星之珠寶（5 → 1，每週最多 10 個），平均約換 "+(Math.round(cv*10)/10)+" 個，就能少買一些珠寶星之球。";
+  drawCharts(reqs[last],mA,W8,needW);
+  $("busy").hidden=true;
+}
+
+
+// ===== 兌換方案與比較圖 =====
+// 星之粉末球：粉末 5／8／10／15／20／30／40／100、星之石 1（機率依遊戲內說明）
+const PBALL=[[5,0,.5],[8,0,.2],[10,0,.1],[15,0,.05],[20,0,.04],[30,0,.03],[40,0,.02],[100,0,.01],[0,1,.05]];
+const PB_G=190, PB_N=20;
+function drawP(){ let u=rnd(), c=0; for(const [a,b,q] of PBALL){ c+=q; if(u<c) return [a,b]; } return [0,1]; }
+// 方案 B：珠寶星之球買到「珠寶」夠，粉末不夠再買星之粉末球（每次 20 顆 190G，星之石當 50 個粉末）
+// 方案 C：只買珠寶星之球，珠寶不換粉末，買到珠寶和粉末都夠為止
+function simScheme(req,which){ const N2=TRIALS/2, m=new Float64Array(N2), k=new Float64Array(N2); seed=777+which.charCodeAt(0);
+  for(let t=0;t<N2;t++){ let p=st.inv.p+st.inv.s*STONE_P,j=st.inv.j,n=0,pb=0;
+    if(which==="B"){ while(j<req.J){ const [a,b]=samplePack(); p+=a; j+=b; n++; }
+      while(p<req.P){ for(let i=0;i<PB_N;i++){ const [a,b]=drawP(); p+=a+b*STONE_P; } pb++; } }
+    else { while(j<req.J||p<req.P){ const [a,b]=samplePack(); p+=a; j+=b; n++; } }
+    m[t]=n; k[t]=pb; }
+  return {m,k};
+}
+const costAt=(m,w,k)=>Float64Array.from(m,(x,i)=>WEEK_G*Math.min(x,w)+PERM_G*Math.max(0,x-w)+(k?PB_G*k[i]:0));
+function cdfPts(a){ const s=Float64Array.from(a).sort(), n=s.length, pts=[], step=Math.max(1,Math.floor(n/200));
+  for(let i=0;i<n;i+=step) pts.push([s[i],(i+1)/n]); pts.push([s[n-1],1]); return pts; }
+function chart(id,{series,xMin=0,xMax,yMin=0,yMax,xFmt,yFmt,vlines=[],hlines=[]}){
+  const Wd=900,H=300,L=64,R=16,T=12,B=34, X=x=>L+(Wd-L-R)*(x-xMin)/(xMax-xMin), Y=y=>T+(H-T-B)*(1-(y-yMin)/(yMax-yMin));
+  let g='<svg viewBox="0 0 '+Wd+' '+H+'" role="img">';
+  for(const y of ticks(yMin,yMax,6)){ g+='<line class="ax" x1="'+L+'" x2="'+(Wd-R)+'" y1="'+Y(y)+'" y2="'+Y(y)+'"/><text class="tk" x="'+(L-6)+'" y="'+(Y(y)+4)+'" text-anchor="end">'+yFmt(y)+'</text>'; }
+  for(const x of ticks(xMin,xMax,6)){ g+='<text class="tk" x="'+X(x)+'" y="'+(H-10)+'" text-anchor="middle">'+xFmt(x)+'</text>'; }
+  for(const v of hlines) g+='<line x1="'+L+'" x2="'+(Wd-R)+'" y1="'+Y(v.y)+'" y2="'+Y(v.y)+'" stroke="var(--muted)" stroke-dasharray="4 4"/><text class="tk" x="'+(Wd-R)+'" y="'+(Y(v.y)-4)+'" text-anchor="end">'+v.t+'</text>';
+  for(const v of vlines) g+='<line x1="'+X(v.x)+'" x2="'+X(v.x)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="'+v.c+'" stroke-width="2"'+(v.d?' stroke-dasharray="5 4"':'')+'/><text class="tk" x="'+(X(v.x)+4)+'" y="'+(v.low?H-B-6:T+12)+'">'+v.t+'</text>';
+  for(const s of series){ const d=s.pts.filter(([x])=>x<=xMax*1.001&&x>=xMin).map(([x,y],i)=>(i?"L":"M")+X(x).toFixed(1)+" "+Y(y).toFixed(1)).join(" ");
+    g+='<path d="'+d+'" fill="none" stroke="'+s.c+'" stroke-width="2.5"'+(s.d?' stroke-dasharray="7 5"':'')+'/>'; }
+  $(id).innerHTML=g+"</svg>";
+  $(id+"l").innerHTML=series.map(s=>'<span><i class="'+(s.d?"d":"")+'" style="border-color:'+s.c+'"></i>'+s.n+"</span>").join("");
+}
+const niceFloor=(x,st)=>Math.floor(x/st)*st;
+const niceStep=r=>{ const e=Math.pow(10,Math.floor(Math.log10(r))); for(const k of [1,2,2.5,5,10]) if(k*e>=r) return k*e; return 10*e; };
+function ticks(a,b,n){ const st=niceStep((b-a)/n), out=[]; for(let x=Math.ceil(a/st-1e-9)*st;x<=b+1e-9;x+=st) out.push(+x.toFixed(6)); return out; }
+const niceMax=x=>{ const e=Math.pow(10,Math.floor(Math.log10(x))); for(const k of [1,1.5,2,2.5,3,4,5,6,8,10]) if(k*e>=x) return k*e; return 10*e; };
+const fG=x=>Math.round(x).toLocaleString("en-US");
+const fP=y=>Math.round(y*100)+"%";
+function within(a,b){ let c=0; for(const x of a) if(x<=b+1e-9) c++; return c/a.length; }
+function drawCharts(req,mA,W8,needW){
+  const B=simScheme(req,"B"), C=simScheme(req,"C");
+  const cA=costAt(mA,W8), cB=costAt(B.m,W8,B.k), cC=costAt(C.m,W8);
+  const c1=[["方案 A：只買珠寶星之球，多的珠寶換成粉末（本頁建議）",cA,"var(--bar)",false],["方案 B：珠寶星之球買到珠寶夠，粉末不夠再買星之粉末球",cB,"var(--goal)",false],["方案 C：只買珠寶星之球，珠寶不換粉末",cC,"var(--muted)",true]];
+  const lo1=Math.min(...c1.map(x=>Math.min(...x[1]))), hi1=Math.max(...c1.map(x=>Math.max(...x[1]))), st1=niceStep((hi1-lo1)/6);
+  chart("c1",{series:c1.map(([n,a,c,d])=>({n,pts:cdfPts(a),c,d})),xMin:niceFloor(lo1,st1),xMax:Math.ceil(hi1/st1)*st1,yMax:1,xFmt:fG,yFmt:fP,hlines:[{y:.9,t:"9 成"}]});
+  $("c1t").innerHTML="<thead><tr><th>方案</th><th class=num>平均</th><th class=num>9 成把握</th><th class=num>比方案 A 多花（平均）</th></tr></thead><tbody>"+
+    c1.map(([n,a])=>"<tr><td>"+n.split("：")[0]+"</td><td class=num>"+fmtG(mean(a))+"</td><td class=num>"+fmtG(q90(a))+"</td><td class=num>"+(a===cA?"—":fmtG(mean(a)-mean(cA)))+"</td></tr>").join("")+"</tbody>";
+  $("c1n").innerHTML=["<b>橫軸</b>：花費（G）；<b>縱軸</b>：在這個花費內，所有選擇的部位都強化完成的機率。曲線越靠左，越省錢。",
+    "<b>方案 B</b> 是許多玩家習慣的做法：珠寶留著強化用，粉末另外買星之粉末球。星之粉末球每個粉末約 0.80～0.94G，比把多的珠寶換成粉末（約 0.44～0.59G）貴。",
+    "<b>方案 C</b> 只買珠寶星之球、但不把珠寶換成粉末，常常為了湊粉末多開很多顆，珠寶用不完。",
+    "方案 B 沒有考慮星之粉末球的限購次數與販賣期限（到 2026/12/15），實際只會更貴或買不到；三個方案都依上方的週數使用每週限購的珠寶星之球。"].map(x=>"<li>"+x+"</li>").join("");
+  // 多等幾週能省多少
+  const s90=Float64Array.from(mA).sort(), wMax=Math.max(8,Math.ceil(s90[Math.floor(s90.length*.9)])+4,W8+4), avg=[],p90=[];
+  for(let w=0;w<=wMax;w++){ const c=costAt(mA,w); avg.push([w,mean(c)]); p90.push([w,q90(c)]); }
+  const lo2=Math.min(...avg.map(x=>x[1])), hi2=p90[0][1], st2=niceStep((hi2-lo2)/5);
+  chart("c2",{series:[{n:"平均",pts:avg,c:"var(--bar)"},{n:"9 成把握",pts:p90,c:"var(--bar)",d:true}],xMax:wMax,yMin:niceFloor(lo2*0.97,st2),yMax:Math.ceil(hi2*1.02/st2)*st2,xFmt:x=>Math.round(x)+" 週",yFmt:fG,
+    vlines:[{x:W8,t:"你設定的 "+W8+" 週",c:"var(--goal)"},{x:needW,t:"只靠每週包約需 "+needW+" 週",c:"var(--muted)",d:true}]});
+  const a0=avg[0][1], aW=avg[Math.min(W8,wMax)][1], aN=avg[Math.min(needW,wMax)][1];
+  $("c2n").innerHTML=["<b>橫軸</b>：花幾週買材料；<b>縱軸</b>：全部完成的花費（G）。",
+    "立刻買齊平均約 "+fmtG(a0)+(W8>0?"；花 "+W8+" 週平均約 "+fmtG(aW)+"，省下約 "+fmtG(a0-aW)+"。":"。"),
+    "花到 "+needW+" 週時平均約 "+fmtG(aN)+"；再往後曲線變平，因為材料已經夠了，多等也不會更便宜。",
+    "前幾週的每週包都會用到，所以曲線一開始幾乎是直線下降：每多等一週，大約省 75G（300G − 225G）。"].map(x=>"<li>"+x+"</li>").join("");
+  // 預算與完成機率
+  const wB=W8>0?W8:1e9, cW=costAt(mA,wB), nmB=W8>0?"花 "+W8+" 週慢慢累積":"只靠每週包，買到夠為止";
+  const c0a=costAt(mA,0), lo3=Math.min(...cW), hi3=Math.max(...c0a), st3=niceStep((hi3-lo3)/6);
+  const b50=mean(costAt(mA,0));
+  chart("c3",{series:[{n:"立刻買齊",pts:cdfPts(costAt(mA,0)),c:"var(--muted)"},{n:nmB,pts:cdfPts(cW),c:"var(--goal)"}],xMin:niceFloor(lo3,st3),xMax:Math.ceil(hi3/st3)*st3,yMax:1,xFmt:fG,yFmt:fP,
+    hlines:[{y:.9,t:"9 成"}],vlines:[{x:b50,t:"立刻買齊的平均 "+fmtG(b50),c:"var(--bar)",low:true}]});
+  const c0=costAt(mA,0), b0=mean(c0), p0=within(c0,b0), pw=within(cW,b0), q0=q90(c0);
+  $("c3n").innerHTML=["<b>橫軸</b>：預算（G）；<b>縱軸</b>：這個預算內全部完成的機率。",
+    "<b>好處一：同樣的預算，完成機率提高</b>：預算 "+fmtG(b0)+"（立刻買齊的平均）時，立刻買齊約 "+fP(p0)+" 的機會完成，"+nmB+"約 "+fP(pw)+"。",
+    "<b>好處二：同樣的把握，花費減少</b>：想要有 9 成把握，立刻買齊要約 "+fmtG(q0)+"，"+nmB+"約 "+fmtG(q90(cW))+"，少花約 "+fmtG(q0-q90(cW))+"。",
+    "遊戲中還有其他方式可以拿到少量材料；如果打算長期慢慢累積，實際花費會比這張圖更少。"].map(x=>"<li>"+x+"</li>").join("");
+}
+// ===== 控制 =====
+$("weeks").addEventListener("input",e=>{ const v=Math.round(+e.target.value); if(v>=0&&v<=520){ st.weeks=v; render(); } });
+$("weeks").addEventListener("change",e=>{ e.target.value=st.weeks; });
+[["hP","p"],["hS","s"],["hJ","j"]].forEach(([id,k])=>{ $(id).addEventListener("input",e=>{ const v=Math.round(+e.target.value); if(v>=0&&v<1e7){ st.inv[k]=v; render(); } }); $(id).addEventListener("change",e=>{ e.target.value=st.inv[k]; }); });
+$("allSix").onclick=()=>{ PARTS.forEach(p=>{ st.cur[p.id]=6; if(st.tgt[p.id]<6) st.tgt[p.id]=6; fillSel(p); }); render(); };
+$("allMax").onclick=()=>{ PARTS.forEach(p=>{ st.tgt[p.id]=MAT[p.g].max; fillSel(p); }); render(); };
+$("allKeep").onclick=()=>{ PARTS.forEach(p=>{ st.tgt[p.id]=Math.max(0,st.cur[p.id]); fillSel(p); }); render(); };
+buildParts(); buildPrio(); $("weeks").value=st.weeks; render();
+</script>
+</body>
+</html>
